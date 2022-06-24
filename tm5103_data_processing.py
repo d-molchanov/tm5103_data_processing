@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 from argparse import ArgumentParser
+from tm5103_data_parser import TM5103DataParser
 
 
 def create_parser():
@@ -18,4 +19,11 @@ if __name__ == '__main__':
     print('This is tm5103 data processing!')
     argparser = create_parser()
     args = argparser.parse_args()
-    print(args)
+    if args.split:
+        print('Split <%s>' % args.filename)
+        data_parser = TM5103DataParser()
+        data_parser.parse_file(args.filename)
+    elif args.average:
+        print('Average <%s>' % args.filename)
+    elif args.graph:
+        print('Graph <%s>' % args.filename)
