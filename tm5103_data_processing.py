@@ -21,8 +21,9 @@ if __name__ == '__main__':
     args = argparser.parse_args()
     if args.split:
         print('Split <%s>' % args.filename)
+        output_dir = 'data_files'
         data_parser = TM5103DataParser()
-        data_parser.parse_file(args.filename)
+        data_parser.parse_file(args.filename, output_dir)
     elif args.average:
         print('Average <%s>' % args.filename)
     elif args.graph:
