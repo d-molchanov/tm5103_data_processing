@@ -9,6 +9,7 @@ def create_parser():
     group = parser.add_mutually_exclusive_group()
     group.add_argument('-s', '--split', action='store_true')
     group.add_argument('-a', '--average', action='store_true')
+    group.add_argument('-t', '--time', action='store_true')
     group.add_argument('-g', '--graph', action='store_true')
     parser.add_argument('filename', nargs='?')
 
@@ -26,5 +27,7 @@ if __name__ == '__main__':
         data_parser.parse_file(args.filename, output_dir)
     elif args.average:
         print('Average <%s>' % args.filename)
+    elif args.time:
+        print('Time change <%s>' % args.filename)
     elif args.graph:
         print('Graph <%s>' % args.filename)
