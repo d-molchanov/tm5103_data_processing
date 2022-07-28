@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 from argparse import ArgumentParser
-from tm5103_data_parser import TM5103DataParser
+from sources.tm5103_data_parser import TM5103DataParser
 
 
 def create_parser():
