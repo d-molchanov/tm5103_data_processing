@@ -23,7 +23,7 @@ class TM5103DataParser:
     def __write_first_line(self, data, dest_dir):
         try:
             output_file = self.__make_title(data[0])
-            str_data = '\t'.join(data)
+            str_data = '\t'.join(data[1:])
             w = open(f'{dest_dir}/{output_file}', 'w')
             w.write(f'{str_data}\n')
         except IOError:
@@ -42,7 +42,7 @@ class TM5103DataParser:
                 for line in f:
                     data = self.__parse_line(line)
                     if data[0] == cur_date:
-                        str_data = '\t'.join(data)
+                        str_data = '\t'.join(data[1:])
                         try:
                             w.write(f'{str_data}\n')
                         except IOError:
