@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 from argparse import ArgumentParser
 from sources.tm5103_data_parser import TM5103DataParser
+from sources.tm5103_time_changer import TM5103TimeChanger
 
 
 def create_parser():
@@ -28,6 +29,9 @@ if __name__ == '__main__':
     elif args.average:
         print('Average <%s>' % args.filename)
     elif args.time:
-        print('Time change <%s>' % args.filename)
+        print('Time change at <%s>' % args.filename)
+        time_changer = TM5103TimeChanger()
+        new_time = '07:00:00'
+        time_changer.change_time(args.filename, new_time)
     elif args.graph:
         print('Graph <%s>' % args.filename)
