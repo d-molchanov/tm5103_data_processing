@@ -1,5 +1,7 @@
 import os
 import time
+from datetime import datetime, timedelta
+
 
 
 class TM5103DataParser:
@@ -18,6 +20,7 @@ class TM5103DataParser:
 
     def __parse_line(self, line):
         return [el for el in line.rstrip().split(' ') if el]
+
 
     # !Переделать функцию, так как она не очевидна - записывает в файл, но возвращает ссылку на файл
     def __write_first_line(self, data, dest_dir):
