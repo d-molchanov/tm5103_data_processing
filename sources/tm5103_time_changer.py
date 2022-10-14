@@ -26,6 +26,33 @@ class TM5103TimeChanger:
             print(f'Mismatch time format: {timestamp} does not suit <23:59:59>')
             return None
 
+    def __change_time_in_line(self, line, separator, timestamp):
+        data = self.__parse_line(line, separator)
+        if data:
+            old_tsp = self.__parse_time(data[0])
+            if old_tsp:
+                return '{}{}{}'.format(
+                    datetime.strftime(timestamp, "%H:%M:%S"),
+                    separator,
+                    data[1])
+            else:
+                return f'Mismatch time format: {timestamp} does not suit <23:59:59>'
+        return f'Mismatch separator <{separator}> cannot parse line'    
+
+
+    def __write_file(self, filename, new_timestamp, firts_timestamp, f, data):
+        with open(f'{filename[:-4]}_tc.{filename[-3:]}', 'w') as w:
+            nts = self.__parse_time(new_timestamp)
+            td = firts_timestamp - nts
+            w.write(f'{datetime.strftime(nts, "%H:%M:%S")}\t{data[1]}')
+            for line in f:
+                data = self.__parse_line(line, '\t')
+                if data:
+                    timestamp = self.__parse_time(data[0])
+                    new_time = timestamp - td
+                    w.write(f'{datetime.strftime(new_time, "%H:%M:%S")}\t{data[1]}')
+
+
     def change_time(self, filename, new_timestamp):
         print(f'Starting time change of <{filename}>.\n...')
         start_time = time.perf_counter()
@@ -38,19 +65,14 @@ class TM5103TimeChanger:
                         first_timestamp_str
                     )
                     if firts_timestamp:
-                        with open(f'{filename[:-4]}_tc.{filename[-3:]}', 'w') as w:
-                            nts = self.__parse_time(new_timestamp)
-                            td = firts_timestamp - nts
-                            w.write(f'{datetime.strftime(nts, "%H:%M:%S")}\t{data[1]}')
-                            for line in f:
-                                data = self.__parse_line(line, '\t')
-                                if data:
-                                    timestamp = self.__parse_time(data[0])
-                                    new_time = timestamp - td
-                                    w.write(f'{datetime.strftime(new_time, "%H:%M:%S")}\t{data[1]}')
+                        self.__write_file(
+                            filename, new_timestamp, firts_timestamp, f, data)    
                 else:
                     print(' '.join((
                         'Format error at first line in', 
-                        f'<{filename}>! Please, check it.')))        
+                        f'<{filename}>! Please, check it.')))
+                parse_time = time.perf_counter() - start_time
+                ms_time = round(parse_time * 1e3, 3)
+                print(f'<{filename}> has been processed in {ms_time} ms.')        
         except IOError:
             print(f'I/O error. Please, check <{filename}>.')
