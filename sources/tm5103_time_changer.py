@@ -6,6 +6,14 @@ from datetime import datetime, timedelta
 class TM5103TimeChanger:
 
 
+    def set_separator(self, separator):
+        self.__sep = separator
+
+
+    def set_time_format(self, time_format):
+        self.__time_format = time_format
+
+
     def __parse_line(self, line, separator):
         first_tab_index = line.find(separator)
         if first_tab_index >= 0:
@@ -23,14 +31,16 @@ class TM5103TimeChanger:
                 f'{timestamp}', '%H:%M:%S'
             )
         except ValueError:
-            print(f'Mismatch time format: {timestamp} does not suit <23:59:59>')
+            print('{0} {1}'.format(
+                f'Mismatch time format: {timestamp}',
+                'does not suit <23:59:59>'))
             return None
 
-    def __change_time_in_line(self, line, separator, timestamp):
+    def __replace_time(self, line, separator, timestamp):
         data = self.__parse_line(line, separator)
         if data:
-            old_tsp = self.__parse_time(data[0])
-            if old_tsp:
+            old_timestamp = self.__parse_time(data[0])
+            if old_timestamp:
                 return '{}{}{}'.format(
                     datetime.strftime(timestamp, "%H:%M:%S"),
                     separator,
