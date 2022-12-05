@@ -10,10 +10,11 @@ class TM5103DataParser:
         if dir_name not in os.listdir():
             try:
                 os.mkdir(dir_name)
+                print(f"<{dir_name}> directory has been created")
             except OSError:
                 print(f"Can't create <{dir_name}> directory")
-            else:
-                print(f"<{dir_name}> directory has been created")
+        else:
+            print(f"<{dir_name}> directory already exists")
 
     def __make_title(self, date):
         return '%s.txt' % '_'.join(reversed(date.split('.')))
