@@ -31,6 +31,8 @@ if __name__ == '__main__':
     elif args.time:
         print('Time change at <%s>' % args.filename)
         time_changer = TM5103TimeChanger()
+        time_changer.set_separator('\t')
+        time_changer.set_time_format('%H:%M:%S')
         new_time = '07:00:00'
         time_changer.change_time(args.filename, new_time)
     elif args.graph:
