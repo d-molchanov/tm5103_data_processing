@@ -26,6 +26,7 @@ if __name__ == '__main__':
         output_dir = 'data_files'
         data_parser = TM5103DataParser()
         data_parser.parse_file(args.filename, output_dir)
+        # data_parser.split_file(args.filename, 8)
     elif args.average:
         print('Average <%s>' % args.filename)
     elif args.time:
