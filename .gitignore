@@ -2,3 +2,5 @@ sources/__pycache__/
 data_files/
 lit/
 All_Chan.txt
+All_Chan_L.txt
+All_Chan_R.txt
