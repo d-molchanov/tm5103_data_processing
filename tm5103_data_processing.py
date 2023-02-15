@@ -1,9 +1,41 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+import csv
+from datetime import datetime
 from argparse import ArgumentParser
 from sources.tm5103_data_parser import TM5103DataParser
 from sources.tm5103_time_changer import TM5103TimeChanger
 
+
+def read_settings(filename, _sep):
+    result = {
+        'output_dir': 'data_files',
+        'channel_count': 4,
+        'new_time': datetime.strptime('07:00:00', '%H:%M:%S')
+    }
+    settings = dict()
+    try:
+        with open(filename, 'r') as f:
+            reader = csv.reader(f, delimiter=_sep)
+            for row in reader:
+                if len(row) == 2:
+                    if row[0]:
+                        settings[row[0]] = row[1]
+    except IOError:
+        print(f'I/O error. Please, check <{filename}>.')
+    if settings.get('output_dir'):
+        result['output_dir'] = settings['output_dir']
+    if settings.get('channel_count'):
+        try:
+            result['channel_count'] = int(settings['channel_count'])
+        except ValueError:
+            print(f'Check {filename}: wrong <channel_count>')
+    if settings.get('new_time'):
+        try:
+            result['new_time'] = datetime.strptime(settings['new_time'], '%H:%M:%S')
+        except ValueError:
+            print(f'Check {filename}: wrong <new_time>')
+    return result   
 
 def create_parser():
     parser = ArgumentParser()
@@ -19,6 +51,7 @@ def create_parser():
 
 if __name__ == '__main__':
     print('This is tm5103 data processing!')
+    print(read_settings('settings.csv', ';'))
     argparser = create_parser()
     args = argparser.parse_args()
     if args.split:
