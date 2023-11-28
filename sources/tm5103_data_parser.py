@@ -178,6 +178,6 @@ filenames = [
 ]
 substitution = {'tm5103-4217863': 'A', 'tm5103-4217905': 'B'}
 # date = '22.09.2023'
-date = '16.11.2023'
+date = '23.11.2023'
 for f in filenames:
     data_parser.process_experiment(f, date, substitution)
