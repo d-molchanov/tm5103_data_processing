@@ -4,6 +4,10 @@ import struct
 
 class Ar4Parser():
 
+    def __init__(self):
+        self.chunk_size = 256
+        self.empty_byte = b'\xff'
+
     def read_in_chunks(self, filename: str, chunk_size: int) -> list:
         time_start = perf_counter()
         result = []
@@ -200,14 +204,12 @@ class Ar4Parser():
         str_data = [self.values_to_str(el, ';') for el in data]
         print(str_data[-1])
 
-        self.write_file(str_data, '{}.csv'.format(datetime(*self.get_tm_datetime(ts['max_timestamp'])).strftime('%Y_%m_%d')))
+        # self.write_file(str_data, '{}.csv'.format(datetime(*self.get_tm_datetime(ts['max_timestamp'])).strftime('%Y_%m_%d')))
 
 
 if __name__ == '__main__':
     
-    filename = 'TM100514.AR4'
-    chunk_size = 256
-    empty_byte = b'\xff'
+    filename = 'TM100514_B.AR4'
     
     ar4_parser = Ar4Parser()
-    ar4_parser.extract_last_date(filename, chunk_size, empty_byte)
+    ar4_parser.extract_last_date(filename, ar4_parser.chunk_size, ar4_parser.empty_byte)
