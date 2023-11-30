@@ -187,7 +187,16 @@ class Ar4Parser():
         except IOError:
             print(f'Error with <{filename}>.')
 
-    def extract_last_date(self, filename: str, chunk_size: int, empty_byte: bytes) -> None:
+    def extract_last_date(self, filename: str, **kwargs) -> None:
+        if 'empty_byte' in kwargs:
+            empty_byte = kwargs['empty_byte']
+        else:
+            empty_byte = self.empty_byte
+        if 'chunk_size' in kwargs:
+            chunk_size = kwargs['chunk_size']
+        else:
+            chunk_size = self.chunk_size
+        
         d = self.parse_ar4_file(filename, chunk_size, empty_byte)
         metadata = self.process_metadata(d['metadata'])
         self.show_metadata(metadata)
@@ -196,10 +205,8 @@ class Ar4Parser():
         self.show_min_and_max_timestamps(ts)
 
         last_date = self.extract_one_date(d['readings'], self.get_tm_datetime(ts['max_timestamp']))
-        print(len(last_date))
 
         data = self.process_chunks(last_date)
-        print(data[-1])
 
         str_data = [self.values_to_str(el, ';') for el in data]
         print(str_data[-1])
@@ -212,4 +219,5 @@ if __name__ == '__main__':
     filename = 'TM100514_B.AR4'
     
     ar4_parser = Ar4Parser()
-    ar4_parser.extract_last_date(filename, ar4_parser.chunk_size, ar4_parser.empty_byte)
+    ar4_parser.extract_last_date(filename)
+    # ar4_parser.extract_last_date(filename, ar4_parser.chunk_size, ar4_parser.empty_byte)
