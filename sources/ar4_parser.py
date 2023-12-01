@@ -187,16 +187,12 @@ class Ar4Parser():
         except IOError:
             print(f'Error with <{filename}>.')
 
-    def extract_last_date(self, filename: str, **kwargs) -> None:
-        if 'empty_byte' in kwargs:
-            empty_byte = kwargs['empty_byte']
-        else:
+    def extract_last_date(self, filename: str, chunk_size=None, empty_byte=None) -> None:
+        if empty_byte == None:
             empty_byte = self.empty_byte
-        if 'chunk_size' in kwargs:
-            chunk_size = kwargs['chunk_size']
-        else:
+        if chunk_size == None:
             chunk_size = self.chunk_size
-        
+
         d = self.parse_ar4_file(filename, chunk_size, empty_byte)
         metadata = self.process_metadata(d['metadata'])
         self.show_metadata(metadata)
