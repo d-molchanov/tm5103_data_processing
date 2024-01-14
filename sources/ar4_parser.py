@@ -209,6 +209,16 @@ class Ar4Parser():
 
         # self.write_file(str_data, '{}.csv'.format(datetime(*self.get_tm_datetime(ts['max_timestamp'])).strftime('%Y_%m_%d')))
 
+    def extract_time_period(self, filename: str, start_timestamp, end_timestamp, chunk_size=None, empty_byte=None) -> None:
+        if empty_byte == None:
+            empty_byte = self.empty_byte
+        if chunk_size == None:
+            chunk_size = self.chunk_size
+
+        d = self.parse_ar4_file(filename, chunk_size, empty_byte)
+        metadata = self.process_metadata(d['metadata'])
+        self.show_metadata(metadata)
+        print(d['readings'][0])
 
 if __name__ == '__main__':
     
@@ -217,3 +227,4 @@ if __name__ == '__main__':
     ar4_parser = Ar4Parser()
     ar4_parser.extract_last_date(filename)
     # ar4_parser.extract_last_date(filename, ar4_parser.chunk_size, ar4_parser.empty_byte)
+    ar4_parser.extract_time_period(filename, 1, 0)
