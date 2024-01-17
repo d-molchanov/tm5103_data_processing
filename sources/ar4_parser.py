@@ -209,22 +209,43 @@ class Ar4Parser():
 
         # self.write_file(str_data, '{}.csv'.format(datetime(*self.get_tm_datetime(ts['max_timestamp'])).strftime('%Y_%m_%d')))
 
-    def extract_time_period(self, filename: str, start_timestamp, end_timestamp, chunk_size=None, empty_byte=None) -> None:
+    def convert_timestamp_to_bytes(self, timestamp):
+        result = (
+            timestamp[5] +
+            timestamp[4] +
+            timestamp[3] +
+            ((timestamp[2]-1)) + 
+            ((timestamp[1]-1)<<5) + 
+            ((timestamp[0] - 2000)<<9)
+        )
+    def extract_time_period(self, filename: str, start_timestamp: tuple, end_timestamp: tuple, chunk_size=None, empty_byte=None) -> None:
         if empty_byte == None:
             empty_byte = self.empty_byte
         if chunk_size == None:
             chunk_size = self.chunk_size
 
+        if len(start_timestamp) == 3:
+            start_timestamp += (0, 0, 0)
+        if len(end_timestamp) == 3:
+            end_timestamp += (23, 59, 59)
+
+        print('start timestamp:', start_timestamp)
+        print('end timestamp:', end_timestamp)
         d = self.parse_ar4_file(filename, chunk_size, empty_byte)
         metadata = self.process_metadata(d['metadata'])
         self.show_metadata(metadata)
-        print(d['readings'][0])
+        print(self.process_chunks(d['readings'][-10:])[-1])
+        
+
+        
 
 if __name__ == '__main__':
     
     filename = 'TM100514_B.AR4'
     
     ar4_parser = Ar4Parser()
-    ar4_parser.extract_last_date(filename)
+    # ar4_parser.extract_last_date(filename)
     # ar4_parser.extract_last_date(filename, ar4_parser.chunk_size, ar4_parser.empty_byte)
-    ar4_parser.extract_time_period(filename, 1, 0)
+    start_timestamp = (2023, 10, 5)
+    end_timestamp = (2023, 10, 5)
+    ar4_parser.extract_time_period(filename, start_timestamp, end_timestamp)
