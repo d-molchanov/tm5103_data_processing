@@ -203,21 +203,21 @@ class Ar4Parser():
         last_date = self.extract_one_date(d['readings'], self.get_tm_datetime(ts['max_timestamp']))
 
         data = self.process_chunks(last_date)
-
         str_data = [self.values_to_str(el, ';') for el in data]
         print(str_data[-1])
 
         # self.write_file(str_data, '{}.csv'.format(datetime(*self.get_tm_datetime(ts['max_timestamp'])).strftime('%Y_%m_%d')))
 
-    def convert_timestamp_to_bytes(self, timestamp):
-        result = (
-            timestamp[5] +
-            timestamp[4] +
-            timestamp[3] +
-            ((timestamp[2]-1)) + 
-            ((timestamp[1]-1)<<5) + 
-            ((timestamp[0] - 2000)<<9)
+    def convert_timestamp_to_int(self, timestamp: tuple) -> int:
+        return (
+            (timestamp[5]) +
+            (timestamp[4]<<6) +
+            (timestamp[3]<<12) +
+            ((timestamp[2]-1)<<17) + 
+            ((timestamp[1]-1)<<22) + 
+            ((timestamp[0] - 2000)<<26)
         )
+
     def extract_time_period(self, filename: str, start_timestamp: tuple, end_timestamp: tuple, chunk_size=None, empty_byte=None) -> None:
         if empty_byte == None:
             empty_byte = self.empty_byte
@@ -228,15 +228,19 @@ class Ar4Parser():
             start_timestamp += (0, 0, 0)
         if len(end_timestamp) == 3:
             end_timestamp += (23, 59, 59)
-
-        print('start timestamp:', start_timestamp)
-        print('end timestamp:', end_timestamp)
+        start_ts = self.convert_timestamp_to_int(start_timestamp)
+        end_ts = self.convert_timestamp_to_int(end_timestamp)
         d = self.parse_ar4_file(filename, chunk_size, empty_byte)
         metadata = self.process_metadata(d['metadata'])
         self.show_metadata(metadata)
-        print(self.process_chunks(d['readings'][-10:])[-1])
-        
-
+        data = []
+        for chunk in d['readings']:
+            ts = struct.unpack('<I', chunk[2:6])[0]
+            if start_ts <= ts <= end_ts:
+                data.append(chunk)
+        processed_data = self.process_chunks(data)
+        print(len(processed_data))
+        return processed_data
         
 
 if __name__ == '__main__':
