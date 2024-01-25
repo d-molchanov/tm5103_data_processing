@@ -52,14 +52,14 @@ class Ar4Parser():
     
         big_chunks = self.read_in_chunks(filename, chunk_size)
         if not big_chunks:
-            return {'metadata': None, 'data': []}
+            return {'header': None, 'data': []}
 
         data_chunks = self.cut_off_empty_tail(big_chunks, chunk_size, empty_byte)
         reduced_chunks = []
         for chunk in data_chunks[1:]:
             reduced_chunks.extend(self.extract_data_chunks(chunk, empty_byte))
         
-        return {'metadata': big_chunks[0], 'data': reduced_chunks}
+        return {'header': big_chunks[0], 'data': reduced_chunks}
 
     def split_prefix_and_reading(self, binary_data: list, empty_byte: bytes) -> list:
         if not binary_data:
@@ -78,7 +78,7 @@ class Ar4Parser():
     def parse_ar4_file(self, filename: str, chunk_size: int, empty_byte: bytes) -> dict:
 
         bd = self.read_binary_file(filename, chunk_size, empty_byte)
-        metadata = bd['metadata']
+        metadata = bd['header']
         binary_data = bd['data']
         processed_data = self.split_prefix_and_reading(binary_data, empty_byte)
         prefix = processed_data['prefix']
