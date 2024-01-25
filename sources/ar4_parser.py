@@ -204,17 +204,13 @@ class Ar4Parser():
             chunk_size = self.chunk_size
 
         d = self.parse_ar4_file(filename, chunk_size, empty_byte)
-        # metadata = self.process_metadata(d['metadata'])
         self.show_metadata(d['metadata'])
 
-        # ts = self.find_min_and_max_timestamps(d['readings'])
-        # self.show_min_and_max_timestamps(ts)
 
         last_date = self.extract_one_date(d['readings'], d['metadata']['max_timestamp'])
 
         data = self.process_chunks(last_date)
         return data
-        str_data = [self.values_to_str(el, ';') for el in data]
         # self.write_file(str_data, '{}.csv'.format(datetime(*self.get_tm_datetime(ts['max_timestamp'])).strftime('%Y_%m_%d')))
 
     def convert_timestamp_to_int(self, timestamp: tuple) -> int:
@@ -247,15 +243,13 @@ class Ar4Parser():
             if start_ts <= ts <= end_ts:
                 data.append(chunk)
         processed_data = self.process_chunks(data)
-        print(len(processed_data))
-        print(processed_data[-1])
         return processed_data
         
 
 if __name__ == '__main__':
     
     filename = 'TM100514_B.AR4'
-    write_to_file = True
+    write_to_file = False
     output_filename = 'out2.csv'
     ar4_parser = Ar4Parser()
     # data = ar4_parser.extract_last_date(filename)
