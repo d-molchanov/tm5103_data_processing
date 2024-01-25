@@ -77,12 +77,12 @@ class Ar4Parser():
 
     def parse_ar4_file(self, filename: str, chunk_size: int, empty_byte: bytes) -> dict:
 
-        bd = self.read_binary_file(filename, chunk_size, empty_byte)
-        metadata = bd['header']
-        binary_data = bd['data']
-        processed_data = self.split_prefix_and_reading(binary_data, empty_byte)
+        binary_data = self.read_binary_file(filename, chunk_size, empty_byte)
+        processed_data = self.split_prefix_and_reading(binary_data['data'], empty_byte)
+        # binary_data = bd['data']
         prefix = processed_data['prefix']
         readings = processed_data['readings']
+        metadata = self.get_metadata(binary_data['header'], readings)
         return {'metadata': metadata, 'prefix': prefix, 'readings': readings}
 
     def get_tm_datetime(self, binary_data: bytes):
@@ -96,10 +96,14 @@ class Ar4Parser():
         # return datetime(*dt[::-1])
         return tuple(dt[::-1])
 
-    def process_metadata(self, metadata: list):
-        creation_datetime = self.get_tm_datetime(metadata[22:26])
-        unit_number = struct.unpack('<I', metadata[26:30])[0]
-        return {'creation_datetime': creation_datetime, 'unit_number': unit_number}
+    def get_metadata(self, header: list, readings: list) -> dict:
+        creation_datetime = self.get_tm_datetime(header[22:26])
+        unit_number = struct.unpack('<I', header[26:30])[0]
+        min_and_max_timestamps = self.find_min_and_max_timestamps(readings)
+        metadata = {'creation_datetime': creation_datetime, 'unit_number': unit_number}
+        metadata.update(min_and_max_timestamps)
+        print(metadata)
+        return metadata
 
     def show_metadata(self, metadata: dict) -> None:
         print(f"\nUnit number: {metadata['unit_number']}\n")
@@ -117,7 +121,7 @@ class Ar4Parser():
                 max_timestamp = timestamp
             if timestamp < min_timestamp:
                 min_timestamp = timestamp
-        return {'min_timestamp': min_timestamp[::-1], 'max_timestamp': max_timestamp[::-1]}
+        return {'min_timestamp': self.get_tm_datetime(min_timestamp[::-1]), 'max_timestamp': self.get_tm_datetime(max_timestamp[::-1])}
 
 
     def show_min_and_max_timestamps(self, ts: dict) -> None:
@@ -231,7 +235,7 @@ class Ar4Parser():
         start_ts = self.convert_timestamp_to_int(start_timestamp)
         end_ts = self.convert_timestamp_to_int(end_timestamp)
         d = self.parse_ar4_file(filename, chunk_size, empty_byte)
-        metadata = self.process_metadata(d['metadata'])
+        metadata = self.get_metadata(d['metadata'])
         self.show_metadata(metadata)
         data = []
         for chunk in d['readings']:
