@@ -110,9 +110,9 @@ class Ar4Parser():
         str_list = ['{:02d}.{:02d}.{:d}'.format(*metadata['creation_datetime'][2::-1]),
         '{:02d}:{:02d}:{:02d}'.format(*metadata['creation_datetime'][3:])]
         print('Creation timestamp:\t{}'.format(' '.join(str_list)))
+        self.show_min_and_max_timestamps(metadata)
 
     def find_min_and_max_timestamps(self, binary_data: list) -> list:
-        time_start = perf_counter()
         max_timestamp = b'\x00\x00\x00\x01'
         min_timestamp = b'\xff\xff\xff\xff'
         for chunk in binary_data:
@@ -121,15 +121,21 @@ class Ar4Parser():
                 max_timestamp = timestamp
             if timestamp < min_timestamp:
                 min_timestamp = timestamp
-        return {'min_timestamp': self.get_tm_datetime(min_timestamp[::-1]), 'max_timestamp': self.get_tm_datetime(max_timestamp[::-1])}
+        return {
+            'min_timestamp': self.get_tm_datetime(min_timestamp[::-1]), 
+            'max_timestamp': self.get_tm_datetime(max_timestamp[::-1])}
 
 
     def show_min_and_max_timestamps(self, ts: dict) -> None:
-        str_list = ['{:02d}.{:02d}.{:d}'.format(*self.get_tm_datetime(ts['min_timestamp'])[2::-1]),
-        '{:02d}:{:02d}:{:02d}'.format(*self.get_tm_datetime(ts['min_timestamp'])[3:])]
+        str_list = ['{:02d}.{:02d}.{:d}'.format(*ts['min_timestamp'][2::-1]),
+        '{:02d}:{:02d}:{:02d}'.format(*ts['min_timestamp'][3:])]
+        # str_list = ['{:02d}.{:02d}.{:d}'.format(*self.get_tm_datetime(ts['min_timestamp'])[2::-1]),
+        # '{:02d}:{:02d}:{:02d}'.format(*self.get_tm_datetime(ts['min_timestamp'])[3:])]
         print('Minimum timestamp:\t{}'.format(' '.join(str_list)))
-        str_list = ['{:02d}.{:02d}.{:d}'.format(*self.get_tm_datetime(ts['max_timestamp'])[2::-1]),
-        '{:02d}:{:02d}:{:02d}'.format(*self.get_tm_datetime(ts['max_timestamp'])[3:])]
+        str_list = ['{:02d}.{:02d}.{:d}'.format(*ts['max_timestamp'][2::-1]),
+        '{:02d}:{:02d}:{:02d}'.format(*ts['max_timestamp'][3:])]
+        # str_list = ['{:02d}.{:02d}.{:d}'.format(*self.get_tm_datetime(ts['max_timestamp'])[2::-1]),
+        # '{:02d}:{:02d}:{:02d}'.format(*self.get_tm_datetime(ts['max_timestamp'])[3:])]
         print('Maximum timestamp:\t{}'.format(' '.join(str_list)))
 
     def extract_one_date(self, binary_data: list, timestamp: tuple) -> list:
@@ -198,18 +204,17 @@ class Ar4Parser():
             chunk_size = self.chunk_size
 
         d = self.parse_ar4_file(filename, chunk_size, empty_byte)
-        metadata = self.process_metadata(d['metadata'])
-        self.show_metadata(metadata)
+        # metadata = self.process_metadata(d['metadata'])
+        self.show_metadata(d['metadata'])
 
-        ts = self.find_min_and_max_timestamps(d['readings'])
-        self.show_min_and_max_timestamps(ts)
+        # ts = self.find_min_and_max_timestamps(d['readings'])
+        # self.show_min_and_max_timestamps(ts)
 
-        last_date = self.extract_one_date(d['readings'], self.get_tm_datetime(ts['max_timestamp']))
+        last_date = self.extract_one_date(d['readings'], d['metadata']['max_timestamp'])
 
         data = self.process_chunks(last_date)
+        return data
         str_data = [self.values_to_str(el, ';') for el in data]
-        print(str_data[-1])
-
         # self.write_file(str_data, '{}.csv'.format(datetime(*self.get_tm_datetime(ts['max_timestamp'])).strftime('%Y_%m_%d')))
 
     def convert_timestamp_to_int(self, timestamp: tuple) -> int:
@@ -235,8 +240,7 @@ class Ar4Parser():
         start_ts = self.convert_timestamp_to_int(start_timestamp)
         end_ts = self.convert_timestamp_to_int(end_timestamp)
         d = self.parse_ar4_file(filename, chunk_size, empty_byte)
-        metadata = self.get_metadata(d['metadata'])
-        self.show_metadata(metadata)
+        self.show_metadata(d['metadata'])
         data = []
         for chunk in d['readings']:
             ts = struct.unpack('<I', chunk[2:6])[0]
@@ -244,16 +248,21 @@ class Ar4Parser():
                 data.append(chunk)
         processed_data = self.process_chunks(data)
         print(len(processed_data))
+        print(processed_data[-1])
         return processed_data
         
 
 if __name__ == '__main__':
     
     filename = 'TM100514_B.AR4'
-    
+    write_to_file = True
+    output_filename = 'out2.csv'
     ar4_parser = Ar4Parser()
-    # ar4_parser.extract_last_date(filename)
+    # data = ar4_parser.extract_last_date(filename)
     # ar4_parser.extract_last_date(filename, ar4_parser.chunk_size, ar4_parser.empty_byte)
     start_timestamp = (2023, 10, 5)
     end_timestamp = (2023, 10, 5)
-    ar4_parser.extract_time_period(filename, start_timestamp, end_timestamp)
+    data = ar4_parser.extract_time_period(filename, start_timestamp, end_timestamp)
+    if write_to_file:
+        str_data = [ar4_parser.values_to_str(el, ';') for el in data]
+        ar4_parser.write_file(str_data, output_filename)
