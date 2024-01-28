@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from time import perf_counter
 import struct
 
@@ -217,7 +217,7 @@ class Ar4Parser():
         return data
         # self.write_file(str_data, '{}.csv'.format(datetime(*self.get_tm_datetime(ts['max_timestamp'])).strftime('%Y_%m_%d')))
 
-    def extrcat_last_date_new(self, data: dict) -> list:
+    def extract_last_date_new(self, data: dict) -> list:
         last_date = self.extract_one_date(
             data['readings'], data['metadata']['max_timestamp'])
         return self.process_chunks(last_date)
@@ -253,6 +253,25 @@ class Ar4Parser():
                 data.append(chunk)
         processed_data = self.process_chunks(data)
         return processed_data
+
+    def extract_time_period_new(self, data: dict, start_timestamp: tuple, end_timestamp: tuple) -> list:
+        try:
+            sts = tuple(datetime(*start_timestamp).timetuple())[:6]
+            # ets = tuple((datetime(*end_timestamp) + timedelta(days=1)).timetuple())[:6]
+            ets = tuple(datetime(*end_timestamp).timetuple())[:6]
+        except ValueError as err:
+            print(err)
+        # print(sts, ets, sep='\n')
+        # print(struct.pack('<I', self.convert_timestamp_to_int(ets)).hex())
+        # print(data['readings'][-1][2:6].hex())
+        start_ts = self.convert_timestamp_to_int(sts)
+        end_ts = self.convert_timestamp_to_int(ets)
+        d = []
+        for chunk in data['readings']:
+            ts = struct.unpack('<I', chunk[2:6])[0]
+            if start_ts <= ts < end_ts:
+                d.append(chunk)
+        return self.process_chunks(d)
         
 
 if __name__ == '__main__':
@@ -260,13 +279,21 @@ if __name__ == '__main__':
     filename = 'TM100514_B.AR4'
     write_to_file = False
     output_filename = 'out2.csv'
+    start_timestamp = (2023, 10, 5)
+    end_timestamp = (2023, 10, 6)
+    # end_timestamp = (2023, 10, 5, 14, 49, 44)
+
     ar4_parser = Ar4Parser()
     raw_data = ar4_parser.parse_ar4_file(filename)
-    data = ar4_parser.extrcat_last_date_new(raw_data)
+    time_start = perf_counter()
+    data1 = ar4_parser.extract_last_date_new(raw_data)
+    print('Last date exctracted in {:.2f} ms. {} rows.'.format((perf_counter() - time_start)*1e3, len(data1)))
+    time_start = perf_counter()
+    data2 = ar4_parser.extract_time_period_new(raw_data, start_timestamp, end_timestamp)
+    print('Time period exctracted in {:.2f} ms. {} rows.'.format((perf_counter() - time_start)*1e3, len(data2)))
+    print(data1 == data2)
     # data = ar4_parser.extract_last_date(filename)
     # ar4_parser.extract_last_date(filename, ar4_parser.chunk_size, ar4_parser.empty_byte)
-    start_timestamp = (2023, 10, 5)
-    end_timestamp = (2023, 10, 5)
     # data = ar4_parser.extract_time_period(filename, start_timestamp, end_timestamp)
     if write_to_file:
         str_data = [ar4_parser.values_to_str(el, ';') for el in data]
