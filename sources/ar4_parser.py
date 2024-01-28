@@ -288,7 +288,8 @@ class Ar4Parser():
         d = []
         for chunk in data['readings']:
             # ts = struct.unpack('<I', chunk[2:6])[0]
-            if start_ts <= chunk[2:6][::-1] < end_ts:
+            # if start_ts <= chunk[2:6][::-1] < end_ts:
+            if start_ts <= chunk[5:1:-1] < end_ts:
                 d.append(chunk)
         # return self.process_chunks(d)
         return d
