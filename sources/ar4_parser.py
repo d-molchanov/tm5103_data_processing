@@ -252,11 +252,11 @@ if __name__ == '__main__':
     write_to_file = False
     output_filename = 'out2.csv'
     ar4_parser = Ar4Parser()
-    # data = ar4_parser.extract_last_date(filename)
+    data = ar4_parser.extract_last_date(filename)
     # ar4_parser.extract_last_date(filename, ar4_parser.chunk_size, ar4_parser.empty_byte)
     start_timestamp = (2023, 10, 5)
     end_timestamp = (2023, 10, 5)
-    data = ar4_parser.extract_time_period(filename, start_timestamp, end_timestamp)
+    # data = ar4_parser.extract_time_period(filename, start_timestamp, end_timestamp)
     if write_to_file:
         str_data = [ar4_parser.values_to_str(el, ';') for el in data]
         ar4_parser.write_file(str_data, output_filename)
