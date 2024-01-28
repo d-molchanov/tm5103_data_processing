@@ -75,7 +75,11 @@ class Ar4Parser():
         return {'prefix': binary_data[:split_index], 
                 'readings': binary_data[split_index:]}
 
-    def parse_ar4_file(self, filename: str, chunk_size: int, empty_byte: bytes) -> dict:
+    def parse_ar4_file(self, filename: str, chunk_size=None, empty_byte=None) -> dict:
+        if empty_byte == None:
+            empty_byte = self.empty_byte
+        if chunk_size == None:
+            chunk_size = self.chunk_size
 
         binary_data = self.read_binary_file(filename, chunk_size, empty_byte)
         processed_data = self.split_prefix_and_reading(binary_data['data'], empty_byte)
@@ -213,6 +217,11 @@ class Ar4Parser():
         return data
         # self.write_file(str_data, '{}.csv'.format(datetime(*self.get_tm_datetime(ts['max_timestamp'])).strftime('%Y_%m_%d')))
 
+    def extrcat_last_date_new(self, data: dict) -> list:
+        last_date = self.extract_one_date(
+            data['readings'], data['metadata']['max_timestamp'])
+        return self.process_chunks(last_date)
+
     def convert_timestamp_to_int(self, timestamp: tuple) -> int:
         return (
             (timestamp[5]) +
@@ -252,7 +261,9 @@ if __name__ == '__main__':
     write_to_file = False
     output_filename = 'out2.csv'
     ar4_parser = Ar4Parser()
-    data = ar4_parser.extract_last_date(filename)
+    raw_data = ar4_parser.parse_ar4_file(filename)
+    data = ar4_parser.extrcat_last_date_new(raw_data)
+    # data = ar4_parser.extract_last_date(filename)
     # ar4_parser.extract_last_date(filename, ar4_parser.chunk_size, ar4_parser.empty_byte)
     start_timestamp = (2023, 10, 5)
     end_timestamp = (2023, 10, 5)
