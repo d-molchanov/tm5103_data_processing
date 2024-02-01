@@ -153,13 +153,13 @@ class Ar4Parser():
     #             result.append(chunk)
     #     return result
 
-    def extract_one_date_new(self, data: dict, timestamp: tuple) -> list:
+    def extract_one_date_new(self, binary_data: list, timestamp: tuple) -> list:
         start_timestamp = timestamp[:3] + (0, 0, 0)
         try:
             end_timestamp = tuple((datetime(*start_timestamp)+timedelta(days=1)).timetuple())[:6]
         except ValueError as err:
             print(f'Wrong timestamp: {err}')
-        return self.extract_time_period_new_2(data, start_timestamp, end_timestamp)            
+        return self.extract_time_period_new_2(binary_data, start_timestamp, end_timestamp)            
 
 
     #Является ли binary_data строкой? По идее - да, это байтовая строка
@@ -235,7 +235,7 @@ class Ar4Parser():
 
     def extract_last_date_new_2(self, data: dict) -> list:
         return self.extract_one_date_new(
-            data, data['metadata']['max_timestamp'])
+            data['readings'], data['metadata']['max_timestamp'])
 
     def convert_timestamp_to_int(self, timestamp: tuple) -> int:
         return (
@@ -290,7 +290,7 @@ class Ar4Parser():
         return d
 
     # Посмотреть перевод "начало временного интервала"
-    def extract_time_period_new_2(self, data: dict, start_timestamp: tuple, end_timestamp: tuple) -> list:
+    def extract_time_period_new_2(self, binary_data: list, start_timestamp: tuple, end_timestamp: tuple) -> list:
         try:
             sts = tuple(datetime(*start_timestamp).timetuple())[:6]
         except ValueError as err:
@@ -303,7 +303,7 @@ class Ar4Parser():
         end_ts = struct.pack('>I', self.convert_timestamp_to_int(ets))
 
         d = []
-        for chunk in data['readings']:
+        for chunk in binary_data:
             # ts = struct.unpack('<I', chunk[2:6])[0]
             # if start_ts <= chunk[2:6][::-1] < end_ts:
             if start_ts <= chunk[5:1:-1] < end_ts:
