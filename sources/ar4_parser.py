@@ -211,27 +211,27 @@ class Ar4Parser():
         except IOError:
             print(f'Error with <{filename}>.')
 
-    def extract_last_date(self, filename: str, chunk_size=None, empty_byte=None) -> None:
-        if empty_byte == None:
-            empty_byte = self.empty_byte
-        if chunk_size == None:
-            chunk_size = self.chunk_size
+    # def extract_last_date(self, filename: str, chunk_size=None, empty_byte=None) -> None:
+    #     if empty_byte == None:
+    #         empty_byte = self.empty_byte
+    #     if chunk_size == None:
+    #         chunk_size = self.chunk_size
 
-        d = self.parse_ar4_file(filename, chunk_size, empty_byte)
-        self.show_metadata(d['metadata'])
+    #     d = self.parse_ar4_file(filename, chunk_size, empty_byte)
+    #     self.show_metadata(d['metadata'])
 
 
-        last_date = self.extract_one_date(d['readings'], d['metadata']['max_timestamp'])
+    #     last_date = self.extract_one_date(d['readings'], d['metadata']['max_timestamp'])
 
-        data = self.process_chunks(last_date)
-        return data
+    #     data = self.process_chunks(last_date)
+    #     return data
         # self.write_file(str_data, '{}.csv'.format(datetime(*self.get_tm_datetime(ts['max_timestamp'])).strftime('%Y_%m_%d')))
 
-    def extract_last_date_new(self, data: dict) -> list:
-        last_date = self.extract_one_date(
-            data['readings'], data['metadata']['max_timestamp'])
-        # return self.process_chunks(last_date)
-        return last_date
+    # def extract_last_date_new(self, data: dict) -> list:
+    #     last_date = self.extract_one_date(
+    #         data['readings'], data['metadata']['max_timestamp'])
+    #     # return self.process_chunks(last_date)
+    #     return last_date
 
     def extract_last_date_new_2(self, data: dict) -> list:
         return self.extract_one_date_new(
@@ -247,47 +247,47 @@ class Ar4Parser():
             ((timestamp[0] - 2000)<<26)
         )
 
-    def extract_time_period(self, filename: str, start_timestamp: tuple, end_timestamp: tuple, chunk_size=None, empty_byte=None) -> None:
-        if empty_byte == None:
-            empty_byte = self.empty_byte
-        if chunk_size == None:
-            chunk_size = self.chunk_size
+    # def extract_time_period(self, filename: str, start_timestamp: tuple, end_timestamp: tuple, chunk_size=None, empty_byte=None) -> None:
+    #     if empty_byte == None:
+    #         empty_byte = self.empty_byte
+    #     if chunk_size == None:
+    #         chunk_size = self.chunk_size
 
-        if len(start_timestamp) == 3:
-            start_timestamp += (0, 0, 0)
-        if len(end_timestamp) == 3:
-            end_timestamp += (23, 59, 59)
-        start_ts = self.convert_timestamp_to_int(start_timestamp)
-        end_ts = self.convert_timestamp_to_int(end_timestamp)
-        d = self.parse_ar4_file(filename, chunk_size, empty_byte)
-        self.show_metadata(d['metadata'])
-        data = []
-        for chunk in d['readings']:
-            ts = struct.unpack('<I', chunk[2:6])[0]
-            if start_ts <= ts <= end_ts:
-                data.append(chunk)
-        processed_data = self.process_chunks(data)
-        return processed_data
+    #     if len(start_timestamp) == 3:
+    #         start_timestamp += (0, 0, 0)
+    #     if len(end_timestamp) == 3:
+    #         end_timestamp += (23, 59, 59)
+    #     start_ts = self.convert_timestamp_to_int(start_timestamp)
+    #     end_ts = self.convert_timestamp_to_int(end_timestamp)
+    #     d = self.parse_ar4_file(filename, chunk_size, empty_byte)
+    #     self.show_metadata(d['metadata'])
+    #     data = []
+    #     for chunk in d['readings']:
+    #         ts = struct.unpack('<I', chunk[2:6])[0]
+    #         if start_ts <= ts <= end_ts:
+    #             data.append(chunk)
+    #     processed_data = self.process_chunks(data)
+    #     return processed_data
 
-    def extract_time_period_new(self, data: dict, start_timestamp: tuple, end_timestamp: tuple) -> list:
-        try:
-            sts = tuple(datetime(*start_timestamp).timetuple())[:6]
-            # ets = tuple((datetime(*end_timestamp) + timedelta(days=1)).timetuple())[:6]
-            ets = tuple(datetime(*end_timestamp).timetuple())[:6]
-        except ValueError as err:
-            print(err)
-        # print(sts, ets, sep='\n')
-        # print(struct.pack('<I', self.convert_timestamp_to_int(ets)).hex())
-        # print(data['readings'][-1][2:6].hex())
-        start_ts = self.convert_timestamp_to_int(sts)
-        end_ts = self.convert_timestamp_to_int(ets)
-        d = []
-        for chunk in data['readings']:
-            ts = struct.unpack('<I', chunk[2:6])[0]
-            if start_ts <= ts < end_ts:
-                d.append(chunk)
-        # return self.process_chunks(d)
-        return d
+    # def extract_time_period_new(self, binary_data: list, start_timestamp: tuple, end_timestamp: tuple) -> list:
+    #     try:
+    #         sts = tuple(datetime(*start_timestamp).timetuple())[:6]
+    #         # ets = tuple((datetime(*end_timestamp) + timedelta(days=1)).timetuple())[:6]
+    #         ets = tuple(datetime(*end_timestamp).timetuple())[:6]
+    #     except ValueError as err:
+    #         print(err)
+    #     # print(sts, ets, sep='\n')
+    #     # print(struct.pack('<I', self.convert_timestamp_to_int(ets)).hex())
+    #     # print(data['readings'][-1][2:6].hex())
+    #     start_ts = self.convert_timestamp_to_int(sts)
+    #     end_ts = self.convert_timestamp_to_int(ets)
+    #     d = []
+    #     for chunk in binary_data:
+    #         ts = struct.unpack('<I', chunk[2:6])[0]
+    #         if start_ts <= ts < end_ts:
+    #             d.append(chunk)
+    #     # return self.process_chunks(d)
+    #     return d
 
     # Посмотреть перевод "начало временного интервала"
     def extract_time_period_new_2(self, binary_data: list, start_timestamp: tuple, end_timestamp: tuple) -> list:
@@ -327,13 +327,13 @@ if __name__ == '__main__':
     time_start = perf_counter()
     data1 = ar4_parser.extract_last_date_new_2(raw_data)
     print('Last date exctracted in {:.2f} ms. {} rows.'.format((perf_counter() - time_start)*1e3, len(data1)))
+    # time_start = perf_counter()
+    # data2 = ar4_parser.extract_time_period_new(raw_data['readings'], start_timestamp, end_timestamp)
+    # print('Time period exctracted in {:.2f} ms. {} rows.'.format((perf_counter() - time_start)*1e3, len(data2)))
     time_start = perf_counter()
-    data2 = ar4_parser.extract_time_period_new_2(raw_data, start_timestamp, end_timestamp)
-    print('Time period exctracted in {:.2f} ms. {} rows.'.format((perf_counter() - time_start)*1e3, len(data2)))
-    time_start = perf_counter()
-    data3 = ar4_parser.extract_time_period_new_2(raw_data, start_timestamp, end_timestamp)
+    data3 = ar4_parser.extract_time_period_new_2(raw_data['readings'], start_timestamp, end_timestamp)
     print('Time period exctracted in {:.2f} ms. {} rows.'.format((perf_counter() - time_start)*1e3, len(data3)))
-    print(data2 == data3)
+    print(data1 == data3)
     # data = ar4_parser.extract_last_date(filename)
     # ar4_parser.extract_last_date(filename, ar4_parser.chunk_size, ar4_parser.empty_byte)
     # data = ar4_parser.extract_time_period(filename, start_timestamp, end_timestamp)
