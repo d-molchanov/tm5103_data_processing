@@ -147,7 +147,8 @@ class Ar4Parser():
         year, month, day = timestamp[:3]
         date = ((day-1)) + ((month-1)<<5) + ((year - 2000)<<9)
         for chunk in binary_data:
-            dt = struct.unpack('<H', chunk[4:6])[0] >> 1
+            # dt = struct.unpack('<H', chunk[4:6])[0] >> 1
+            dt = struct.unpack('<I', chunk[2:6])[0] >> 17
             if dt == date:
                 result.append(chunk)
         return result
@@ -275,13 +276,17 @@ class Ar4Parser():
         # return self.process_chunks(d)
         return d
 
+    # Посмотреть перевод "начало временного интервала"
     def extract_time_period_new_2(self, data: dict, start_timestamp: tuple, end_timestamp: tuple) -> list:
         try:
             sts = tuple(datetime(*start_timestamp).timetuple())[:6]
-            # ets = tuple((datetime(*end_timestamp) + timedelta(days=1)).timetuple())[:6]
+        except ValueError as err:
+            print(err, err)
+            print(f'Wrong start timestamp: {err}.')
+        try: 
             ets = tuple(datetime(*end_timestamp).timetuple())[:6]
         except ValueError as err:
-            print(err)
+            print(f'Wrong end timestamp: {err}.')
         start_ts = struct.pack('>I', self.convert_timestamp_to_int(sts))
         end_ts = struct.pack('>I', self.convert_timestamp_to_int(ets))
 
@@ -300,7 +305,7 @@ if __name__ == '__main__':
     filename = 'TM100514_B.AR4'
     write_to_file = False
     output_filename = 'out2.csv'
-    start_timestamp = (2023, 1, 5)
+    start_timestamp = (2023, 10, 5)
     # start_timestamp = (2023, 10, 5)
     end_timestamp = (2023, 10, 6)
     # end_timestamp = (2023, 10, 5, 14, 49, 44)
@@ -311,7 +316,7 @@ if __name__ == '__main__':
     data1 = ar4_parser.extract_last_date_new(raw_data)
     print('Last date exctracted in {:.2f} ms. {} rows.'.format((perf_counter() - time_start)*1e3, len(data1)))
     time_start = perf_counter()
-    data2 = ar4_parser.extract_time_period_new(raw_data, start_timestamp, end_timestamp)
+    data2 = ar4_parser.extract_time_period_new_2(raw_data, start_timestamp, end_timestamp)
     print('Time period exctracted in {:.2f} ms. {} rows.'.format((perf_counter() - time_start)*1e3, len(data2)))
     time_start = perf_counter()
     data3 = ar4_parser.extract_time_period_new_2(raw_data, start_timestamp, end_timestamp)
