@@ -142,16 +142,25 @@ class Ar4Parser():
         # '{:02d}:{:02d}:{:02d}'.format(*self.get_tm_datetime(ts['max_timestamp'])[3:])]
         print('Maximum timestamp:\t{}'.format(' '.join(str_list)))
 
-    def extract_one_date(self, binary_data: list, timestamp: tuple) -> list:
-        result = []
-        year, month, day = timestamp[:3]
-        date = ((day-1)) + ((month-1)<<5) + ((year - 2000)<<9)
-        for chunk in binary_data:
-            # dt = struct.unpack('<H', chunk[4:6])[0] >> 1
-            dt = struct.unpack('<I', chunk[2:6])[0] >> 17
-            if dt == date:
-                result.append(chunk)
-        return result
+    # def extract_one_date(self, binary_data: list, timestamp: tuple) -> list:
+    #     result = []
+    #     year, month, day = timestamp[:3]
+    #     date = ((day-1)) + ((month-1)<<5) + ((year - 2000)<<9)
+    #     for chunk in binary_data:
+    #         # dt = struct.unpack('<H', chunk[4:6])[0] >> 1
+    #         dt = struct.unpack('<I', chunk[2:6])[0] >> 17
+    #         if dt == date:
+    #             result.append(chunk)
+    #     return result
+
+    def extract_one_date_new(self, data: dict, timestamp: tuple) -> list:
+        start_timestamp = timestamp[:3] + (0, 0, 0)
+        try:
+            end_timestamp = tuple((datetime(*start_timestamp)+timedelta(days=1)).timetuple())[:6]
+        except ValueError as err:
+            print(f'Wrong timestamp: {err}')
+        return self.extract_time_period_new_2(data, start_timestamp, end_timestamp)            
+
 
     #Является ли binary_data строкой? По идее - да, это байтовая строка
     def get_bits(self, binary_data: str, n: int) -> list:
@@ -224,6 +233,10 @@ class Ar4Parser():
         # return self.process_chunks(last_date)
         return last_date
 
+    def extract_last_date_new_2(self, data: dict) -> list:
+        return self.extract_one_date_new(
+            data, data['metadata']['max_timestamp'])
+
     def convert_timestamp_to_int(self, timestamp: tuple) -> int:
         return (
             (timestamp[5]) +
@@ -281,7 +294,6 @@ class Ar4Parser():
         try:
             sts = tuple(datetime(*start_timestamp).timetuple())[:6]
         except ValueError as err:
-            print(err, err)
             print(f'Wrong start timestamp: {err}.')
         try: 
             ets = tuple(datetime(*end_timestamp).timetuple())[:6]
@@ -313,7 +325,7 @@ if __name__ == '__main__':
     ar4_parser = Ar4Parser()
     raw_data = ar4_parser.parse_ar4_file(filename)
     time_start = perf_counter()
-    data1 = ar4_parser.extract_last_date_new(raw_data)
+    data1 = ar4_parser.extract_last_date_new_2(raw_data)
     print('Last date exctracted in {:.2f} ms. {} rows.'.format((perf_counter() - time_start)*1e3, len(data1)))
     time_start = perf_counter()
     data2 = ar4_parser.extract_time_period_new_2(raw_data, start_timestamp, end_timestamp)
