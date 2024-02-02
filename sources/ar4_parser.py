@@ -315,6 +315,17 @@ class Ar4Parser():
         return (struct.unpack('<H', binary_data[4:6])[0] >> 1)
         # return (struct.unpack('<I', binary_data[2:6])[0] >> 17)
 
+
+    def convert_int_to_date(self, int_date: int):
+        mask = [0b11111, 0b1111, 0b11111]
+        shift = [0, 5, 9]
+        dt = [int_date>>s & m for s, m in zip(shift, mask)]
+        dt[-1] += 2000
+        dt[-2] += 1
+        dt[-3] += 1
+        return tuple(dt[::-1])
+
+
     def split_dates(self, binary_data: list) -> list:
         if not binary_data:
             return {}
@@ -326,10 +337,6 @@ class Ar4Parser():
                 result[ts].append(chunk)
             else:
                 result[ts] = [chunk]
-        keys = sorted(list(result.keys()))
-        first_key, last_key = keys[0], keys[-1]
-        print(len(result[last_key]))
-
         return result
 
 if __name__ == '__main__':
