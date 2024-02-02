@@ -310,7 +310,27 @@ class Ar4Parser():
                 d.append(chunk)
         # return self.process_chunks(d)
         return d
-        
+
+    def convert_bytes_to_int(self, binary_data: bytes) -> int:
+        return (struct.unpack('<H', binary_data[4:6])[0] >> 1)
+        # return (struct.unpack('<I', binary_data[2:6])[0] >> 17)
+
+    def split_dates(self, binary_data: list) -> list:
+        if not binary_data:
+            return {}
+        result = {}
+        for chunk in binary_data:
+            ts = self.convert_bytes_to_int(chunk)
+            # ts = self.get_tm_datetime(chunk[2:6])[:3]
+            if ts in result:
+                result[ts].append(chunk)
+            else:
+                result[ts] = [chunk]
+        keys = sorted(list(result.keys()))
+        first_key, last_key = keys[0], keys[-1]
+        print(len(result[last_key]))
+
+        return result
 
 if __name__ == '__main__':
     
@@ -334,6 +354,11 @@ if __name__ == '__main__':
     data3 = ar4_parser.extract_time_period_new_2(raw_data['readings'], start_timestamp, end_timestamp)
     print('Time period exctracted in {:.2f} ms. {} rows.'.format((perf_counter() - time_start)*1e3, len(data3)))
     print(data1 == data3)
+    time_start = perf_counter()
+    # data4 = ar4_parser.split_dates(raw_data['readings'])
+    data4 = ar4_parser.split_dates(raw_data['readings'])
+    print('Dates were splitted in {:.2f} ms. {} dates.'.format((perf_counter() - time_start)*1e3, len(data4)))
+
     # data = ar4_parser.extract_last_date(filename)
     # ar4_parser.extract_last_date(filename, ar4_parser.chunk_size, ar4_parser.empty_byte)
     # data = ar4_parser.extract_time_period(filename, start_timestamp, end_timestamp)
