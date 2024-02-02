@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from time import perf_counter
 import struct
+import csv
 
 class Ar4Parser():
 
@@ -326,7 +327,7 @@ class Ar4Parser():
         return tuple(dt[::-1])
 
 
-    def split_dates(self, binary_data: list) -> list:
+    def split_dates(self, binary_data: list, write_files=False) -> dict:
         if not binary_data:
             return {}
         result = {}
@@ -337,6 +338,21 @@ class Ar4Parser():
                 result[ts].append(chunk)
             else:
                 result[ts] = [chunk]
+        if write_files:
+            for key in result:
+                filename = '{:02d}_{:02d}_{:02d}.csv'.format(*self.convert_int_to_date(key))
+                data = self.process_chunks(result[key])
+                # with open(filename, 'w', newline='') as csvfile:
+                #     fieldnames = ['datetime', 'values', 'errors', 'limits', 'cs']
+                #     writer = csv.DictWriter(csvfile, fieldnames=fieldnames, delimiter=';')
+
+                #     writer.writeheader()
+                #     for d in data:
+                #         writer.writerow(d)
+                str_data = [self.values_to_str(chunk, ';') for chunk in data]
+                self.write_file(str_data, filename)
+                print(filename)
+                print(data[-1])
         return result
 
 if __name__ == '__main__':
@@ -355,15 +371,13 @@ if __name__ == '__main__':
     data1 = ar4_parser.extract_last_date_new_2(raw_data)
     print('Last date exctracted in {:.2f} ms. {} rows.'.format((perf_counter() - time_start)*1e3, len(data1)))
     # time_start = perf_counter()
-    # data2 = ar4_parser.extract_time_period_new(raw_data['readings'], start_timestamp, end_timestamp)
-    # print('Time period exctracted in {:.2f} ms. {} rows.'.format((perf_counter() - time_start)*1e3, len(data2)))
-    time_start = perf_counter()
-    data3 = ar4_parser.extract_time_period_new_2(raw_data['readings'], start_timestamp, end_timestamp)
-    print('Time period exctracted in {:.2f} ms. {} rows.'.format((perf_counter() - time_start)*1e3, len(data3)))
-    print(data1 == data3)
+    # data3 = ar4_parser.extract_time_period_new_2(raw_data['readings'], start_timestamp, end_timestamp)
+    # print('Time period exctracted in {:.2f} ms. {} rows.'.format((perf_counter() - time_start)*1e3, len(data3)))
+    # print(data1 == data3)
     time_start = perf_counter()
     # data4 = ar4_parser.split_dates(raw_data['readings'])
-    data4 = ar4_parser.split_dates(raw_data['readings'])
+    data4 = ar4_parser.split_dates(data1, write_files=True)
+    # data4 = ar4_parser.split_dates(raw_data['readings'], write_files=True)
     print('Dates were splitted in {:.2f} ms. {} dates.'.format((perf_counter() - time_start)*1e3, len(data4)))
 
     # data = ar4_parser.extract_last_date(filename)
