@@ -188,8 +188,8 @@ class Ar4Parser():
         return r
 
     def values_to_str(self, reading: dict, sep: str) -> str:
-        # str_data = ['{:02d}.{:02d}.{:d}'.format(*reading['datetime'][2::-1]),
-        str_data = ['{:02d}:{:02d}:{:02d}'.format(*reading['datetime'][3:]),
+        str_data = ['{:02d}.{:02d}.{:d}'.format(*reading['datetime'][2::-1]),
+        '{:02d}:{:02d}:{:02d}'.format(*reading['datetime'][3:]),
         *['{:.6f}'.format(v).replace('.', ',') if v != None else 'None' for v in reading['values']]]
         return '{}\n'.format(sep.join(str_data))
 
