@@ -273,9 +273,9 @@ class Ar4Parser():
 
 if __name__ == '__main__':
     
-    filename = 'TM100514_B.AR4'
-    write_to_file = False
-    output_filename = 'out2.csv'
+    filename = 'TM031312_B.AR4'
+    write_to_file = True
+    output_filename = '2024_03_13_B.csv'
     start_timestamp = (2023, 10, 5)
     # start_timestamp = (2023, 10, 5)
     end_timestamp = (2023, 10, 6)
@@ -285,20 +285,24 @@ if __name__ == '__main__':
     raw_data = ar4_parser.parse_ar4_file(filename)
     time_start = perf_counter()
     data1 = ar4_parser.extract_last_date_new_2(raw_data)
+    processed_data = ar4_parser.process_chunks(data1)
+    # print(processed_data[-1])
+    # str_data = ar4_parser.values_to_str(processed_data, ';')
+    # print(str_data[-1])
     print('Last date exctracted in {:.2f} ms. {} rows.'.format((perf_counter() - time_start)*1e3, len(data1)))
     # time_start = perf_counter()
     # data3 = ar4_parser.extract_time_period_new_2(raw_data['readings'], start_timestamp, end_timestamp)
     # print('Time period exctracted in {:.2f} ms. {} rows.'.format((perf_counter() - time_start)*1e3, len(data3)))
     # print(data1 == data3)
-    time_start = perf_counter()
+    # time_start = perf_counter()
     # data4 = ar4_parser.split_dates(raw_data['readings'])
-    data4 = ar4_parser.split_dates(data1, write_files=True)
+    # data4 = ar4_parser.split_dates(data1, write_files=True)
     # data4 = ar4_parser.split_dates(raw_data['readings'], write_files=True)
-    print('Dates were splitted in {:.2f} ms. {} dates.'.format((perf_counter() - time_start)*1e3, len(data4)))
+    # print('Dates were splitted in {:.2f} ms. {} dates.'.format((perf_counter() - time_start)*1e3, len(data4)))
 
     # data = ar4_parser.extract_last_date(filename)
     # ar4_parser.extract_last_date(filename, ar4_parser.chunk_size, ar4_parser.empty_byte)
     # data = ar4_parser.extract_time_period(filename, start_timestamp, end_timestamp)
     if write_to_file:
-        str_data = [ar4_parser.values_to_str(el, ';') for el in data]
+        str_data = [ar4_parser.values_to_str(el, ';') for el in processed_data]
         ar4_parser.write_file(str_data, output_filename)
