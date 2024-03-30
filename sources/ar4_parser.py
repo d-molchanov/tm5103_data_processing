@@ -201,7 +201,7 @@ class Ar4Parser():
         except IOError:
             print(f'Error with <{filename}>.')
 
-    def extract_last_date_new_2(self, data: dict) -> list:
+    def extract_last_date(self, data: dict) -> list:
         return self.extract_one_date_new(
             data['readings'], data['metadata']['max_timestamp'])
 
@@ -273,7 +273,7 @@ class Ar4Parser():
 
 if __name__ == '__main__':
     
-    filename = 'TM031312_B.AR4'
+    filename = 'TM100514_B.AR4'
     write_to_file = True
     output_filename = '2024_03_13_B.csv'
     start_timestamp = (2023, 10, 5)
@@ -284,11 +284,17 @@ if __name__ == '__main__':
     ar4_parser = Ar4Parser()
     raw_data = ar4_parser.parse_ar4_file(filename)
     time_start = perf_counter()
-    data1 = ar4_parser.extract_last_date_new_2(raw_data)
+    data1 = ar4_parser.extract_last_date(raw_data)
     processed_data = ar4_parser.process_chunks(data1)
-    # print(processed_data[-1])
+    dt_format = '{:d}{:02d}{:02d}{:02d}{:02d}{:02d}' 
+    start_timestamp = dt_format.format(*processed_data[0]['datetime'])
+    end_timestamp = dt_format.format(*processed_data[-1]['datetime'])
+    output_filename = '{}_{}-{}.csv'.format(
+        raw_data['metadata']['unit_number'],
+        start_timestamp,
+        end_timestamp
+    )
     # str_data = ar4_parser.values_to_str(processed_data, ';')
-    # print(str_data[-1])
     print('Last date exctracted in {:.2f} ms. {} rows.'.format((perf_counter() - time_start)*1e3, len(data1)))
     # time_start = perf_counter()
     # data3 = ar4_parser.extract_time_period_new_2(raw_data['readings'], start_timestamp, end_timestamp)
