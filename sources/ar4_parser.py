@@ -271,6 +271,23 @@ class Ar4Parser():
                 self.write_file(str_data, filename)
         return result
 
+    def extract_last_date_from_outside(self, raw_data: dict, write_to_file=False):
+        data = self.extract_last_date(raw_data)
+        processed_data = self.process_chunks(data)
+        dt_format = '{:d}{:02d}{:02d}{:02d}{:02d}{:02d}' 
+        start_timestamp = dt_format.format(*processed_data[0]['datetime'])
+        end_timestamp = dt_format.format(*processed_data[-1]['datetime'])
+        output_filename = '{}_{}-{}.csv'.format(
+            raw_data['metadata']['unit_number'],
+            start_timestamp,
+            end_timestamp
+        )
+        if write_to_file:
+            str_data = [self.values_to_str(el, ';') for el in processed_data]
+            self.write_file(str_data, output_filename)
+        return processed_data
+
+
 if __name__ == '__main__':
     
     filename = 'TM100514_B.AR4'
@@ -284,18 +301,19 @@ if __name__ == '__main__':
     ar4_parser = Ar4Parser()
     raw_data = ar4_parser.parse_ar4_file(filename)
     time_start = perf_counter()
-    data1 = ar4_parser.extract_last_date(raw_data)
-    processed_data = ar4_parser.process_chunks(data1)
-    dt_format = '{:d}{:02d}{:02d}{:02d}{:02d}{:02d}' 
-    start_timestamp = dt_format.format(*processed_data[0]['datetime'])
-    end_timestamp = dt_format.format(*processed_data[-1]['datetime'])
-    output_filename = '{}_{}-{}.csv'.format(
-        raw_data['metadata']['unit_number'],
-        start_timestamp,
-        end_timestamp
-    )
+    processed_data = ar4_parser.extract_last_date_from_outside(raw_data, write_to_file=True)
+    # data1 = ar4_parser.extract_last_date(raw_data)
+    # processed_data = ar4_parser.process_chunks(data1)
+    # dt_format = '{:d}{:02d}{:02d}{:02d}{:02d}{:02d}' 
+    # start_timestamp = dt_format.format(*processed_data[0]['datetime'])
+    # end_timestamp = dt_format.format(*processed_data[-1]['datetime'])
+    # output_filename = '{}_{}-{}.csv'.format(
+    #     raw_data['metadata']['unit_number'],
+    #     start_timestamp,
+    #     end_timestamp
+    # )
     # str_data = ar4_parser.values_to_str(processed_data, ';')
-    print('Last date exctracted in {:.2f} ms. {} rows.'.format((perf_counter() - time_start)*1e3, len(data1)))
+    print('Last date exctracted in {:.2f} ms. {} rows.'.format((perf_counter() - time_start)*1e3, len(processed_data)))
     # time_start = perf_counter()
     # data3 = ar4_parser.extract_time_period_new_2(raw_data['readings'], start_timestamp, end_timestamp)
     # print('Time period exctracted in {:.2f} ms. {} rows.'.format((perf_counter() - time_start)*1e3, len(data3)))
@@ -309,6 +327,7 @@ if __name__ == '__main__':
     # data = ar4_parser.extract_last_date(filename)
     # ar4_parser.extract_last_date(filename, ar4_parser.chunk_size, ar4_parser.empty_byte)
     # data = ar4_parser.extract_time_period(filename, start_timestamp, end_timestamp)
-    if write_to_file:
-        str_data = [ar4_parser.values_to_str(el, ';') for el in processed_data]
-        ar4_parser.write_file(str_data, output_filename)
+
+    # if write_to_file:
+    #     str_data = [ar4_parser.values_to_str(el, ';') for el in processed_data]
+    #     ar4_parser.write_file(str_data, output_filename)
