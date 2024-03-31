@@ -1,3 +1,5 @@
+from typing import List, Tuple
+
 from datetime import datetime, timedelta
 from time import perf_counter
 import struct
@@ -9,7 +11,7 @@ class Ar4Parser():
         self.chunk_size = 256
         self.empty_byte = b'\xff'
 
-    def read_in_chunks(self, filename: str, chunk_size: int) -> list:
+    def read_in_chunks(self, filename: str, chunk_size: int) -> List[bytes]:
         time_start = perf_counter()
         result = []
         try:
@@ -143,13 +145,13 @@ class Ar4Parser():
         # '{:02d}:{:02d}:{:02d}'.format(*self.get_tm_datetime(ts['max_timestamp'])[3:])]
         print('Maximum timestamp:\t{}'.format(' '.join(str_list)))
 
-    def extract_one_date_new(self, binary_data: list, timestamp: tuple) -> list:
+    def extract_one_date(self, binary_data: list, timestamp: tuple) -> list:
         start_timestamp = timestamp[:3] + (0, 0, 0)
         try:
             end_timestamp = tuple((datetime(*start_timestamp)+timedelta(days=1)).timetuple())[:6]
         except ValueError as err:
             print(f'Wrong timestamp: {err}')
-        return self.extract_time_period_new_2(binary_data, start_timestamp, end_timestamp)            
+        return self.extract_time_period(binary_data, start_timestamp, end_timestamp)            
 
 
     #Является ли binary_data строкой? По идее - да, это байтовая строка
@@ -202,7 +204,7 @@ class Ar4Parser():
             print(f'Error with <{filename}>.')
 
     def extract_last_date(self, data: dict) -> list:
-        return self.extract_one_date_new(
+        return self.extract_one_date(
             data['readings'], data['metadata']['max_timestamp'])
 
     def convert_timestamp_to_int(self, timestamp: tuple) -> int:
@@ -216,7 +218,7 @@ class Ar4Parser():
         )
 
     # Посмотреть перевод "начало временного интервала"
-    def extract_time_period_new_2(self, binary_data: list, start_timestamp: tuple, end_timestamp: tuple) -> list:
+    def extract_time_period(self, binary_data: list, start_timestamp: tuple, end_timestamp: tuple) -> list:
         try:
             sts = tuple(datetime(*start_timestamp).timetuple())[:6]
         except ValueError as err:
@@ -271,36 +273,29 @@ class Ar4Parser():
                 self.write_file(str_data, filename)
         return result
 
+    def create_filename(self, unit_number: int, start_timestamp: Tuple[int], end_timestamp: Tuple[int]) -> str:
+        dt_format = '{:d}{:02d}{:02d}{:02d}{:02d}{:02d}' 
+        sts = dt_format.format(*start_timestamp)
+        ets = dt_format.format(*end_timestamp)
+        return '{}_{}-{}.csv'.format(unit_number, sts, ets)
+
+
+    def if_write_file(self, processed_data: List[dict], unit_number: int, write_to_file: bool) -> None:
+        output_filename = self.create_filename(unit_number, processed_data[0]['datetime'], processed_data[-1]['datetime'])
+        if write_to_file:
+            str_data = [self.values_to_str(el, ';') for el in processed_data]
+            self.write_file(str_data, output_filename)
+
     def extract_last_date_from_outside(self, raw_data: dict, write_to_file=False):
         data = self.extract_last_date(raw_data)
         processed_data = self.process_chunks(data)
-        dt_format = '{:d}{:02d}{:02d}{:02d}{:02d}{:02d}' 
-        sts = dt_format.format(*processed_data[0]['datetime'])
-        ets = dt_format.format(*processed_data[-1]['datetime'])
-        output_filename = '{}_{}-{}.csv'.format(
-            raw_data['metadata']['unit_number'],
-            sts,
-            ets
-        )
-        if write_to_file:
-            str_data = [self.values_to_str(el, ';') for el in processed_data]
-            self.write_file(str_data, output_filename)
+        self.if_write_file(processed_data, raw_data['metadata']['unit_number'], write_to_file)
         return processed_data
 
     def extract_time_period_from_outside(self, raw_data: dict, start_timestamp: tuple, end_timestamp: tuple, write_to_file=False):
-        data = self.extract_time_period_new_2(raw_data['readings'], start_timestamp, end_timestamp)
+        data = self.extract_time_period(raw_data['readings'], start_timestamp, end_timestamp)
         processed_data = self.process_chunks(data)
-        dt_format = '{:d}{:02d}{:02d}{:02d}{:02d}{:02d}' 
-        sts = dt_format.format(*processed_data[0]['datetime'])
-        ets = dt_format.format(*processed_data[-1]['datetime'])
-        output_filename = '{}_{}-{}_new.csv'.format(
-            raw_data['metadata']['unit_number'],
-            sts,
-            ets
-        )
-        if write_to_file:
-            str_data = [self.values_to_str(el, ';') for el in processed_data]
-            self.write_file(str_data, output_filename)
+        self.if_write_file(processed_data, raw_data['metadata']['unit_number'], write_to_file)
         return processed_data
 
 
@@ -317,11 +312,11 @@ if __name__ == '__main__':
     ar4_parser = Ar4Parser()
     raw_data = ar4_parser.parse_ar4_file(filename)
     time_start = perf_counter()
-    processed_data = ar4_parser.extract_last_date_from_outside(raw_data, write_to_file=True)
-    # processed_data = ar4_parser.extract_time_period_from_outside(raw_data, start_timestamp, end_timestamp, write_to_file=True)
+    # processed_data = ar4_parser.extract_last_date_from_outside(raw_data, write_to_file=True)
+    processed_data = ar4_parser.extract_time_period_from_outside(raw_data, start_timestamp, end_timestamp, write_to_file=True)
     print('Last date exctracted in {:.2f} ms. {} rows.'.format((perf_counter() - time_start)*1e3, len(processed_data)))
     # time_start = perf_counter()
-    # data3 = ar4_parser.extract_time_period_new_2(raw_data['readings'], start_timestamp, end_timestamp)
+    # data3 = ar4_parser.extract_time_period(raw_data['readings'], start_timestamp, end_timestamp)
     # print('Time period exctracted in {:.2f} ms. {} rows.'.format((perf_counter() - time_start)*1e3, len(data3)))
     # print(data1 == data3)
     # time_start = perf_counter()
