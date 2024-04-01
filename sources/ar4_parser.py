@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Dict, Optional
 
 from datetime import datetime, timedelta
 from time import perf_counter
@@ -27,7 +27,7 @@ class Ar4Parser():
         return result
 
         # Check working with full archive!
-    def cut_off_empty_tail(self, chunks:list, chunk_size:int, empty_byte:str) -> list:
+    def cut_off_empty_tail(self, chunks:List[bytes], chunk_size:int, empty_byte:bytes) -> List[bytes]:
         if not chunks:
             return []
 
@@ -36,7 +36,7 @@ class Ar4Parser():
             if ch != chunk_with_no_data:
                 return chunks[:len(chunks) - i]
 
-    def extract_data_chunks(self, binary_data: list, empty_byte: bytes) -> list:
+    def extract_data_chunks(self, binary_data: bytes, empty_byte: bytes) -> List[bytes]:
         result = []
         i = 0
         while i < len(binary_data):
@@ -51,7 +51,7 @@ class Ar4Parser():
         return result
 
 
-    def read_binary_file(self, filename: str, chunk_size: int,  empty_byte: bytes) -> dict:
+    def read_binary_file(self, filename: str, chunk_size: int,  empty_byte: bytes) -> Dict[str, List[bytes]]:
     
         big_chunks = self.read_in_chunks(filename, chunk_size)
         if not big_chunks:
@@ -64,7 +64,7 @@ class Ar4Parser():
         
         return {'header': big_chunks[0], 'data': reduced_chunks}
 
-    def split_prefix_and_reading(self, binary_data: list, empty_byte: bytes) -> list:
+    def split_prefix_and_reading(self, binary_data: List[bytes], empty_byte: bytes) -> Dict[str, List[bytes]]:
         if not binary_data:
             return []
         not_datetime = 4*empty_byte
@@ -78,7 +78,7 @@ class Ar4Parser():
         return {'prefix': binary_data[:split_index], 
                 'readings': binary_data[split_index:]}
 
-    def parse_ar4_file(self, filename: str, chunk_size=None, empty_byte=None) -> dict:
+    def parse_ar4_file(self, filename: str, chunk_size:Optional[int]=None, empty_byte:Optional[bytes]=None) -> Dict[str, List[bytes]]:
         if empty_byte == None:
             empty_byte = self.empty_byte
         if chunk_size == None:
@@ -92,7 +92,7 @@ class Ar4Parser():
         metadata = self.get_metadata(binary_data['header'], readings)
         return {'metadata': metadata, 'prefix': prefix, 'readings': readings}
 
-    def get_tm_datetime(self, binary_data: bytes):
+    def get_tm_datetime(self, binary_data: bytes) -> Tuple[int, int, int, int, int, int]:
         dt_int = struct.unpack('<I', binary_data)[0]
         mask = [0b111111, 0b111111, 0b11111, 0b11111, 0b1111, 0b11111]
         shift = [0, 6, 12, 17, 22, 26]
@@ -103,7 +103,7 @@ class Ar4Parser():
         # return datetime(*dt[::-1])
         return tuple(dt[::-1])
 
-    def get_metadata(self, header: list, readings: list) -> dict:
+    def get_metadata(self, header: List[bytes], readings: List[bytes]) -> Dict[str, int]:
         creation_datetime = self.get_tm_datetime(header[22:26])
         unit_number = struct.unpack('<I', header[26:30])[0]
         min_and_max_timestamps = self.find_min_and_max_timestamps(readings)
@@ -112,14 +112,14 @@ class Ar4Parser():
         print(metadata)
         return metadata
 
-    def show_metadata(self, metadata: dict) -> None:
+    def show_metadata(self, metadata: Dict[str, int]) -> None:
         print(f"\nUnit number: {metadata['unit_number']}\n")
         str_list = ['{:02d}.{:02d}.{:d}'.format(*metadata['creation_datetime'][2::-1]),
         '{:02d}:{:02d}:{:02d}'.format(*metadata['creation_datetime'][3:])]
         print('Creation timestamp:\t{}'.format(' '.join(str_list)))
         self.show_min_and_max_timestamps(metadata)
 
-    def find_min_and_max_timestamps(self, binary_data: list) -> list:
+    def find_min_and_max_timestamps(self, binary_data: List[bytes]) -> Dict[str, Tuple[int, int, int, int, int, int]]:
         max_timestamp = b'\x00\x00\x00\x01'
         min_timestamp = b'\xff\xff\xff\xff'
         for chunk in binary_data:
@@ -133,7 +133,7 @@ class Ar4Parser():
             'max_timestamp': self.get_tm_datetime(max_timestamp[::-1])}
 
 
-    def show_min_and_max_timestamps(self, ts: dict) -> None:
+    def show_min_and_max_timestamps(self, ts: Dict[str, Tuple[int, int, int, int, int, int]]) -> None:
         str_list = ['{:02d}.{:02d}.{:d}'.format(*ts['min_timestamp'][2::-1]),
         '{:02d}:{:02d}:{:02d}'.format(*ts['min_timestamp'][3:])]
         # str_list = ['{:02d}.{:02d}.{:d}'.format(*self.get_tm_datetime(ts['min_timestamp'])[2::-1]),
@@ -145,7 +145,7 @@ class Ar4Parser():
         # '{:02d}:{:02d}:{:02d}'.format(*self.get_tm_datetime(ts['max_timestamp'])[3:])]
         print('Maximum timestamp:\t{}'.format(' '.join(str_list)))
 
-    def extract_one_date(self, binary_data: list, timestamp: tuple) -> list:
+    def extract_one_date(self, binary_data: List[bytes], timestamp: Tuple[int, int, int, int, int, int]) -> List[bytes]:
         start_timestamp = timestamp[:3] + (0, 0, 0)
         try:
             end_timestamp = tuple((datetime(*start_timestamp)+timedelta(days=1)).timetuple())[:6]
@@ -154,18 +154,16 @@ class Ar4Parser():
         return self.extract_time_period(binary_data, start_timestamp, end_timestamp)            
 
 
-    #Является ли binary_data строкой? По идее - да, это байтовая строка
-    def get_bits(self, binary_data: str, n: int) -> list:
+    def get_bits(self, binary_data: bytes, n: int) -> List[int]:
         result = []
         for i in range(n):
             result.append(binary_data >> i & 1)
         return result[::-1]
 
-    #Является ли binary_data строкой? По идее - да, это байтовая строка
-    def convert_to_float(self, binary_data: str) -> list:
+    def convert_to_float(self, binary_data: bytes) -> float:
         return struct.unpack('!f',binary_data)[0]
 
-    def decrypt_data(self, binary_data: bytes) -> dict:
+    def decrypt_data(self, binary_data: bytes) -> Dict[str, list]:
         indices = [0, 2, 6, 7, 8, 9, 13, 17, 21, 25, 29, 33, 37, 41, 42]
         temp_data = [binary_data[i1:i2] for i1, i2 in zip(indices[:-1], indices[1:])]
         dt = self.get_tm_datetime(temp_data[1])
@@ -176,7 +174,7 @@ class Ar4Parser():
         cs = binary_data[-1]
         return {'datetime': dt, 'values': values, 'errors': err, 'limits': limits, 'cs': cs}
 
-    def process_chunks(self, binary_data: list) -> list:
+    def process_chunks(self, binary_data: List[bytes]) -> List[dict]:
         if not binary_data:
             return []
         time_start = perf_counter()
@@ -195,7 +193,7 @@ class Ar4Parser():
         *['{:.6f}'.format(v).replace('.', ',') if v != None else 'None' for v in reading['values']]]
         return '{}\n'.format(sep.join(str_data))
 
-    def write_file(self, data: list, filename: str) -> None:
+    def write_file(self, data: List[dict], filename: str) -> None:
         try:
             with open(filename, 'w') as f:
                 for line in data:
@@ -203,11 +201,11 @@ class Ar4Parser():
         except IOError:
             print(f'Error with <{filename}>.')
 
-    def extract_last_date(self, data: dict) -> list:
+    def extract_last_date(self, data: dict) -> List[bytes]:
         return self.extract_one_date(
             data['readings'], data['metadata']['max_timestamp'])
 
-    def convert_timestamp_to_int(self, timestamp: tuple) -> int:
+    def convert_timestamp_to_int(self, timestamp: Tuple[int, int, int, int, int, int]) -> int:
         return (
             (timestamp[5]) +
             (timestamp[4]<<6) +
@@ -218,7 +216,7 @@ class Ar4Parser():
         )
 
     # Посмотреть перевод "начало временного интервала"
-    def extract_time_period(self, binary_data: list, start_timestamp: tuple, end_timestamp: tuple) -> list:
+    def extract_time_period(self, binary_data: List[bytes], start_timestamp: Tuple[int, int, int, int, int, int], end_timestamp: Tuple[int, int, int, int, int, int]) -> List[bytes]:
         try:
             sts = tuple(datetime(*start_timestamp).timetuple())[:6]
         except ValueError as err:
@@ -244,7 +242,7 @@ class Ar4Parser():
         # return (struct.unpack('<I', binary_data[2:6])[0] >> 17)
 
 
-    def convert_int_to_date(self, int_date: int):
+    def convert_int_to_date(self, int_date: int) -> Tuple[int, int, int, int, int, int]:
         mask = [0b11111, 0b1111, 0b11111]
         shift = [0, 5, 9]
         dt = [int_date>>s & m for s, m in zip(shift, mask)]
@@ -254,7 +252,7 @@ class Ar4Parser():
         return tuple(dt[::-1])
 
 
-    def split_dates(self, binary_data: list, write_files=False) -> dict:
+    def split_dates(self, binary_data: List[bytes], write_files: bool=False) -> Dict[str, list]:
         if not binary_data:
             return {}
         result = {}
@@ -273,7 +271,7 @@ class Ar4Parser():
                 self.write_file(str_data, filename)
         return result
 
-    def create_filename(self, unit_number: int, start_timestamp: Tuple[int], end_timestamp: Tuple[int]) -> str:
+    def create_filename(self, unit_number: int, start_timestamp: Tuple[int, int, int, int, int, int], end_timestamp: Tuple[int, int, int, int, int, int]) -> str:
         dt_format = '{:d}{:02d}{:02d}{:02d}{:02d}{:02d}' 
         sts = dt_format.format(*start_timestamp)
         ets = dt_format.format(*end_timestamp)
@@ -286,13 +284,13 @@ class Ar4Parser():
             str_data = [self.values_to_str(el, ';') for el in processed_data]
             self.write_file(str_data, output_filename)
 
-    def extract_last_date_from_outside(self, raw_data: dict, write_to_file=False):
+    def extract_last_date_from_outside(self, raw_data: dict, write_to_file: bool =False) -> List[dict]:
         data = self.extract_last_date(raw_data)
         processed_data = self.process_chunks(data)
         self.if_write_file(processed_data, raw_data['metadata']['unit_number'], write_to_file)
         return processed_data
 
-    def extract_time_period_from_outside(self, raw_data: dict, start_timestamp: tuple, end_timestamp: tuple, write_to_file=False):
+    def extract_time_period_from_outside(self, raw_data: dict, start_timestamp: Tuple[int, int, int, int, int, int], end_timestamp: Tuple[int, int, int, int, int, int], write_to_file:bool =False):
         data = self.extract_time_period(raw_data['readings'], start_timestamp, end_timestamp)
         processed_data = self.process_chunks(data)
         self.if_write_file(processed_data, raw_data['metadata']['unit_number'], write_to_file)
