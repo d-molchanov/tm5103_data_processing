@@ -8,11 +8,11 @@ import csv
 class Ar4Parser():
 
     def __init__(self):
-        self.chunk_size: int = 256
-        self.empty_byte: bytes = b'\xff'
-        self.file_sep: str = ';'
-        self.datetime_format: str = '{:d}{:02d}{:02d}{:02d}{:02d}{:02d}' 
-        self.file_ext: str = 'csv'
+        self.chunk_size = 256
+        self.empty_byte = b'\xff'
+        self.file_sep = ';'
+        self.datetime_format = '{:d}{:02d}{:02d}{:02d}{:02d}{:02d}' 
+        self.file_ext = 'csv'
 
     def config_parser(self, config: Dict[str, Union[str, int]]) -> None:
         if 'chunk_size' in config:
@@ -70,7 +70,7 @@ class Ar4Parser():
         return result
 
 
-    def read_binary_file(self, filename: str, chunk_size: Optional[int],  empty_byte: Optional[bytes]) -> Dict[str, Union[List[bytes], bytes, None]]:
+    def read_binary_file(self, filename: str, chunk_size: int,  empty_byte: bytes) -> Dict[str, Union[List[bytes], bytes, None]]:
     
         big_chunks = self.read_in_chunks(filename, chunk_size)
         if not big_chunks:
@@ -97,12 +97,9 @@ class Ar4Parser():
         return {'prefix': binary_data[:split_index], 
                 'readings': binary_data[split_index:]}
 
-    def parse_ar4_file(self, filename: str, chunk_size:Optional[int]=None, empty_byte:Optional[bytes]=None) -> Dict[str, List[bytes]]:
-        if empty_byte == None:
-            empty_byte = self.empty_byte
-        if chunk_size == None:
-            chunk_size = self.chunk_size
-
+    def parse_ar4_file(self, filename: str, _chunk_size:Optional[int]=None, _empty_byte:Optional[bytes]=None) -> Union[Dict[str, List[bytes]], Dict[str, int]]:
+        empty_byte = (_empty_byte or self.empty_byte)
+        chunk_size = (_chunk_size or self.chunk_size)
         binary_data = self.read_binary_file(filename, chunk_size, empty_byte)
         processed_data = self.split_prefix_and_reading(binary_data['data'], empty_byte)
         # binary_data = bd['data']
@@ -122,7 +119,7 @@ class Ar4Parser():
         # return datetime(*dt[::-1])
         return tuple(dt[::-1])
 
-    def get_metadata(self, header: List[bytes], readings: List[bytes]) -> Dict[str, int]:
+    def get_metadata(self, header: bytes, readings: List[bytes]) -> Dict[str, int]:
         creation_datetime = self.get_tm_datetime(header[22:26])
         unit_number = struct.unpack('<I', header[26:30])[0]
         min_and_max_timestamps = self.find_min_and_max_timestamps(readings)
@@ -131,7 +128,7 @@ class Ar4Parser():
         print(metadata)
         return metadata
 
-    def show_metadata(self, metadata: Dict[str, int]) -> None:
+    def show_metadata(self, metadata: Union[Dict[str, int], Dict[str, str], Dict[str, Tuple[int, int, int, int, int, int]]]) -> None:
         print(f"\nUnit number: {metadata['unit_number']}\n")
         str_list = ['{:02d}.{:02d}.{:d}'.format(*metadata['creation_datetime'][2::-1]),
         '{:02d}:{:02d}:{:02d}'.format(*metadata['creation_datetime'][3:])]
@@ -173,7 +170,7 @@ class Ar4Parser():
         return self.extract_time_period(binary_data, start_timestamp, end_timestamp)            
 
 
-    def get_bits(self, binary_data: bytes, n: int) -> List[int]:
+    def get_bits(self, binary_data: int, n: int) -> List[int]:
         result = []
         for i in range(n):
             result.append(binary_data >> i & 1)
@@ -182,6 +179,7 @@ class Ar4Parser():
     def convert_to_float(self, binary_data: bytes) -> float:
         return struct.unpack('!f',binary_data)[0]
 
+    #!Метод жестко привязан к длине chunk в 42 байта
     def decrypt_data(self, binary_data: bytes) -> Dict[str, list]:
         indices = [0, 2, 6, 7, 8, 9, 13, 17, 21, 25, 29, 33, 37, 41, 42]
         temp_data = [binary_data[i1:i2] for i1, i2 in zip(indices[:-1], indices[1:])]
