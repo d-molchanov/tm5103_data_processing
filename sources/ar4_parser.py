@@ -8,8 +8,24 @@ import csv
 class Ar4Parser():
 
     def __init__(self):
-        self.chunk_size = 256
-        self.empty_byte = b'\xff'
+        self.chunk_size: int = 256
+        self.empty_byte: bytes = b'\xff'
+        self.file_sep: str = ';'
+        self.datetime_format: str = '{:d}{:02d}{:02d}{:02d}{:02d}{:02d}' 
+        self.file_ext: str = 'csv'
+
+    def config_parser(self, config: Dict[str, Union[str, int]]) -> None:
+        if 'chunk_size' in config:
+            self.chunk_size = config['chunk_size']
+        if 'empty_byte' in config:
+            self.empty_byte = config['empty_byte']
+        if 'file_sep' in config:
+            self.file_sep = config['file_sep']
+        if 'datetime_format' in config:
+            self.datetime_format = config['datetime_format']
+        if 'file_ext' in config:
+            self.file_ext = config['file_ext']
+        return None
 
     def read_in_chunks(self, filename: str, chunk_size: int) -> List[bytes]:
         time_start = perf_counter()
@@ -304,18 +320,28 @@ if __name__ == '__main__':
     
     filename = 'TM100514_B.AR4'
     write_to_file = True
-    output_filename = '2024_03_13_B.csv'
+    config = {
+        'chunk_size': 256,
+        'empty_byte': b'\xff',
+        'file_sep': ';',
+        'datetime_format': '{:d}{:02d}{:02d}{:02d}{:02d}{:02d}',
+        'file_ext': 'csv'
+    }
+    # output_filename = '2024_03_13_B.csv'
     start_timestamp = (2023, 10, 5)
     # start_timestamp = (2023, 10, 5)
     end_timestamp = (2023, 10, 6)
     # end_timestamp = (2023, 10, 5, 14, 49, 44)
 
     ar4_parser = Ar4Parser()
+    ar4_parser.config_parser(config)
     raw_data = ar4_parser.parse_ar4_file(filename)
     time_start = perf_counter()
     # processed_data = ar4_parser.extract_last_date_from_outside(raw_data, write_to_file=True)
-    processed_data = ar4_parser.extract_time_period_from_outside(raw_data, start_timestamp, end_timestamp, write_to_file=True)
-    print('Last date exctracted in {:.2f} ms. {} rows.'.format((perf_counter() - time_start)*1e3, len(processed_data)))
+    # processed_data = ar4_parser.extract_time_period_from_outside(raw_data, start_timestamp, end_timestamp, write_to_file=True)
+    # print('Last date exctracted in {:.2f} ms. {} rows.'.format((perf_counter() - time_start)*1e3, len(processed_data)))
+    
+    # ========================================old==============================
     # time_start = perf_counter()
     # data3 = ar4_parser.extract_time_period(raw_data['readings'], start_timestamp, end_timestamp)
     # print('Time period exctracted in {:.2f} ms. {} rows.'.format((perf_counter() - time_start)*1e3, len(data3)))
