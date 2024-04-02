@@ -1,4 +1,4 @@
-from typing import List, Tuple, Dict, Optional
+from typing import List, Tuple, Dict, Optional, Union
 
 from datetime import datetime, timedelta
 from time import perf_counter
@@ -28,13 +28,16 @@ class Ar4Parser():
 
         # Check working with full archive!
     def cut_off_empty_tail(self, chunks:List[bytes], chunk_size:int, empty_byte:bytes) -> List[bytes]:
+        result: List[bytes] = []
         if not chunks:
-            return []
+            return result
 
         chunk_with_no_data = chunk_size*empty_byte
         for i, ch in enumerate(chunks[::-1]):
             if ch != chunk_with_no_data:
-                return chunks[:len(chunks) - i]
+                result = chunks[:len(chunks) - i]
+                break
+        return result
 
     def extract_data_chunks(self, binary_data: bytes, empty_byte: bytes) -> List[bytes]:
         result = []
@@ -51,7 +54,7 @@ class Ar4Parser():
         return result
 
 
-    def read_binary_file(self, filename: str, chunk_size: int,  empty_byte: bytes) -> Dict[str, List[bytes]]:
+    def read_binary_file(self, filename: str, chunk_size: Optional[int],  empty_byte: Optional[bytes]) -> Dict[str, Union[List[bytes], bytes, None]]:
     
         big_chunks = self.read_in_chunks(filename, chunk_size)
         if not big_chunks:
@@ -66,7 +69,7 @@ class Ar4Parser():
 
     def split_prefix_and_reading(self, binary_data: List[bytes], empty_byte: bytes) -> Dict[str, List[bytes]]:
         if not binary_data:
-            return []
+            return {}
         not_datetime = 4*empty_byte
 
         split_index = 0
