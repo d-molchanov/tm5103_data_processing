@@ -333,7 +333,7 @@ if __name__ == '__main__':
 
     ar4_parser = Ar4Parser()
     ar4_parser.config_parser(config)
-    # raw_data = ar4_parser.parse_ar4_file(filename)
+    raw_data = ar4_parser.parse_ar4_file(filename)
     # time_start = perf_counter()
     # processed_data = ar4_parser.extract_last_date_from_outside(raw_data, write_to_file=True)
     # processed_data = ar4_parser.extract_time_period_from_outside(raw_data, start_timestamp, end_timestamp, write_to_file=True)
@@ -346,6 +346,7 @@ if __name__ == '__main__':
     print(chunks[0].hex(), chunks[0], sep='\n')
     print('\n', chunks[1].hex())
     print('\n', chunks[2].hex())
+    print(chunks[0][43:60])
 
     # ========================================old==============================
     # time_start = perf_counter()
