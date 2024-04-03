@@ -333,12 +333,20 @@ if __name__ == '__main__':
 
     ar4_parser = Ar4Parser()
     ar4_parser.config_parser(config)
-    raw_data = ar4_parser.parse_ar4_file(filename)
-    time_start = perf_counter()
+    # raw_data = ar4_parser.parse_ar4_file(filename)
+    # time_start = perf_counter()
     # processed_data = ar4_parser.extract_last_date_from_outside(raw_data, write_to_file=True)
     # processed_data = ar4_parser.extract_time_period_from_outside(raw_data, start_timestamp, end_timestamp, write_to_file=True)
     # print('Last date exctracted in {:.2f} ms. {} rows.'.format((perf_counter() - time_start)*1e3, len(processed_data)))
     
+    chunks = ar4_parser.read_in_chunks(filename, 256)
+    print(len(chunks))
+    print(len(chunks[0]), len(chunks[-1]))
+    print(chunks[0][:110])
+    print(chunks[0].hex(), chunks[0], sep='\n')
+    print('\n', chunks[1].hex())
+    print('\n', chunks[2].hex())
+
     # ========================================old==============================
     # time_start = perf_counter()
     # data3 = ar4_parser.extract_time_period(raw_data['readings'], start_timestamp, end_timestamp)
