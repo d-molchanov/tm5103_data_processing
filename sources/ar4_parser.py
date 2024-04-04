@@ -179,7 +179,7 @@ class Ar4Parser():
     def convert_to_float(self, binary_data: bytes) -> float:
         return struct.unpack('!f',binary_data)[0]
 
-    #!Метод жестко привязан к длине chunk в 42 байта
+    #!Метод жестко привязан к длине chunk в 42 байта. Вообще надо вынести декодирование значений в отдельный метод.
     def decrypt_data(self, binary_data: bytes) -> Dict[str, list]:
         indices = [0, 2, 6, 7, 8, 9, 13, 17, 21, 25, 29, 33, 37, 41, 42]
         temp_data = [binary_data[i1:i2] for i1, i2 in zip(indices[:-1], indices[1:])]
@@ -347,6 +347,15 @@ if __name__ == '__main__':
     print('\n', chunks[1].hex())
     print('\n', chunks[2].hex())
     print(chunks[0][43:60])
+    print()
+    print(228642, chunks[228642].hex())
+    print(228643, chunks[228643].hex())
+    print(228644, chunks[228644].hex())
+    # for i, ch in enumerate(chunks[::-1]):
+    #     if ch != b'\xff'*256:
+    #         print(ch)
+    #         print(len(chunks)-i)
+    #         break
 
     # ========================================old==============================
     # time_start = perf_counter()
