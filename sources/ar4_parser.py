@@ -10,6 +10,7 @@ class Ar4Parser():
     def __init__(self):
         self.chunk_size = 256
         self.empty_byte = b'\xff'
+        self.channels_amount = 8
         self.file_sep = ';'
         self.datetime_format = '{:d}{:02d}{:02d}{:02d}{:02d}{:02d}' 
         self.file_ext = 'csv'
@@ -19,6 +20,8 @@ class Ar4Parser():
             self.chunk_size = config['chunk_size']
         if 'empty_byte' in config:
             self.empty_byte = config['empty_byte']
+        if 'channels_amount' in config:
+            self.channels_amount = config['channels_amount']
         if 'file_sep' in config:
             self.file_sep = config['file_sep']
         if 'datetime_format' in config:
@@ -176,8 +179,43 @@ class Ar4Parser():
             result.append(binary_data >> i & 1)
         return result[::-1]
 
+    def get_bits_LE(self, i: int, bits_amount: int) -> List[int]:
+        return [i >> j & 1 for j in range(bits_amount)]
+
     def convert_to_float(self, binary_data: bytes) -> float:
         return struct.unpack('!f',binary_data)[0]
+
+    def get_tm_datetime_new(self, i: int) -> Tuple[int, int, int, int, int, int]:
+        mask = [0b111111, 0b111111, 0b11111, 0b11111, 0b1111, 0b11111]
+        shift = [0, 6, 12, 17, 22, 26]
+        dt = [i>>s & m for s, m in zip(shift, mask)]
+        dt[-1] += 2000
+        dt[-2] += 1
+        dt[-3] += 1
+        return tuple(dt[::-1])
+
+    #! Если количество каналов 8, то ошибки и уставки помещаются в 1 байт. Не понятно, как будет выглядеть все это для другого количества каналов (4 и 16)
+    def decrypt_reading(self, reading: bytes) -> dict:
+        st, length, dt, lim1, lim2, err = struct.unpack('<2BI3B', reading[:9])
+        dt = self.get_tm_datetime_new(dt)
+        # lim1 = self.get_bits_LE(lim1, 8)
+        lim2 = self.get_bits_LE(lim2, 8)
+        err = self.get_bits_LE(err, 8)
+        *values, cs = struct.unpack('>8fB', reading[9:])
+        values = [el if not e else None for el, e in zip(values, err)]
+        return {'datetime': dt, 'values': values, 'errors': err, 'limits': lim2, 'cs': cs}
+
+    #! Если количество каналов 8, то ошибки и уставки помещаются в 1 байт. Не понятно, как будет выглядеть все это для другого количества каналов (4 и 16)
+    def decrypt_reading_2(self, reading: bytes) -> dict:
+        st, length, dt, lim1, lim2, err = struct.unpack('<2BI3B', reading[:9])
+        dt = self.get_tm_datetime_new(dt)
+        # lim1 = self.get_bits_LE(lim1, 8)
+        lim2 = self.get_bits_LE(lim2, 8)
+        err = self.get_bits_LE(err, 8)
+        v = [reading[i:i+4] for i in range(9, len(reading), 4)]
+        values = [struct.unpack('>f', el)[0] if not e else None for el, e in zip(v, err)]
+        cs = reading[-1]
+        return {'datetime': dt, 'values': values, 'errors': err, 'limits': lim2, 'cs': cs}
 
     #!Метод жестко привязан к длине chunk в 42 байта. Вообще надо вынести декодирование значений в отдельный метод.
     def decrypt_data(self, binary_data: bytes) -> Dict[str, list]:
@@ -321,6 +359,7 @@ if __name__ == '__main__':
     config = {
         'chunk_size': 256,
         'empty_byte': b'\xff',
+        'channels_amount': 8,
         'file_sep': ';',
         'datetime_format': '{:d}{:02d}{:02d}{:02d}{:02d}{:02d}',
         'file_ext': 'csv'
@@ -334,28 +373,47 @@ if __name__ == '__main__':
     ar4_parser = Ar4Parser()
     ar4_parser.config_parser(config)
     raw_data = ar4_parser.parse_ar4_file(filename)
+    chunks = ar4_parser.extract_time_period(raw_data['readings'], (2022, 6, 1, 0, 0, 0), (2024, 1, 1, 0, 0, 0))
+
+    time_start = perf_counter()
+    processed_data = [ar4_parser.decrypt_data(el) for el in chunks]
+    print('data decrypted in {:.2f} ms: {} lines.'.format((perf_counter() - time_start)*1e3, len(processed_data)))
+
+    time_start = perf_counter()
+    processed_data = [ar4_parser.decrypt_reading(el) for el in chunks]
+    print('readings decrypted in {:.2f} ms: {} lines.'.format((perf_counter() - time_start)*1e3, len(processed_data)))
+
+    time_start = perf_counter()
+    processed_data = [ar4_parser.decrypt_reading_2(el) for el in chunks]
+    print('readings decrypted 2 in {:.2f} ms: {} lines.'.format((perf_counter() - time_start)*1e3, len(processed_data)))
+
     # time_start = perf_counter()
     # processed_data = ar4_parser.extract_last_date_from_outside(raw_data, write_to_file=True)
     # processed_data = ar4_parser.extract_time_period_from_outside(raw_data, start_timestamp, end_timestamp, write_to_file=True)
     # print('Last date exctracted in {:.2f} ms. {} rows.'.format((perf_counter() - time_start)*1e3, len(processed_data)))
     
-    chunks = ar4_parser.read_in_chunks(filename, 256)
-    print(len(chunks))
-    print(len(chunks[0]), len(chunks[-1]))
-    print(chunks[0][:110])
-    print(chunks[0].hex(), chunks[0], sep='\n')
-    print('\n', chunks[1].hex())
-    print('\n', chunks[2].hex())
-    print(chunks[0][43:60])
-    print()
-    print(228642, chunks[228642].hex())
-    print(228643, chunks[228643].hex())
-    print(228644, chunks[228644].hex())
-    # for i, ch in enumerate(chunks[::-1]):
-    #     if ch != b'\xff'*256:
-    #         print(ch)
-    #         print(len(chunks)-i)
-    #         break
+    # chunks = ar4_parser.read_in_chunks(filename, 256)
+
+    # s = 'a52a67ec485e0000f843dac32943efe6ce43f6125201f6125201f6125201f6125201f6125201f61252df'
+    # n = 101
+    # one_reading = bytes.fromhex(s)
+
+    # print(*struct.unpack('<2BI3B', one_reading[:9]))
+    # print(*struct.unpack('>8fB', one_reading[9:]))
+    # d1 = ar4_parser.decrypt_reading_2(one_reading)
+    # d2 = ar4_parser.decrypt_data(one_reading)
+    # print(d1 == d2)
+
+    # print(*[el.hex() for el in struct.unpack('ss4ssss4s4s4s4s4s4s4s4ss', one_reading)])
+    # print(*[el.hex() for el in struct.unpack('s s 4s s s s 4s 4s 4s 4s 4s 4s 4s 4s s', one_reading)])
+    # print(*[hex(el) for el in [165, 42, 24136, 248, 67]])
+    # print(*[el for el in struct.unpack('<B B I B B B f f f f f f f f B', one_reading)])
+    # print(*[el for el in struct.unpack('>B B I B B B f f f f f f f f B', one_reading)])
+    # print(*[el for el in struct.unpack('BBIBBfffffffBs', one_reading)])
+
+    # print(ar4_parser.get_bits(n, 8))
+    # print(ar4_parser.get_bits_LE(n, 8)[::-1])
+
 
     # ========================================old==============================
     # time_start = perf_counter()
