@@ -198,26 +198,14 @@ class Ar4Parser():
     def decrypt_reading(self, reading: bytes) -> dict:
         st, length, dt, lim1, lim2, err = struct.unpack('<2BI3B', reading[:9])
         dt = self.get_tm_datetime_new(dt)
-        # lim1 = self.get_bits_LE(lim1, 8)
-        lim2 = self.get_bits_LE(lim2, 8)
+        lim1 = self.get_bits_LE(lim1, 8)
+        # lim2 = self.get_bits_LE(lim2, 8)
         err = self.get_bits_LE(err, 8)
         *values, cs = struct.unpack('>8fB', reading[9:])
         values = [el if not e else None for el, e in zip(values, err)]
-        return {'datetime': dt, 'values': values, 'errors': err, 'limits': lim2, 'cs': cs}
+        return {'datetime': dt, 'values': values, 'errors': err, 'limits': lim1, 'cs': cs}
 
-    #! Если количество каналов 8, то ошибки и уставки помещаются в 1 байт. Не понятно, как будет выглядеть все это для другого количества каналов (4 и 16)
-    def decrypt_reading_2(self, reading: bytes) -> dict:
-        st, length, dt, lim1, lim2, err = struct.unpack('<2BI3B', reading[:9])
-        dt = self.get_tm_datetime_new(dt)
-        # lim1 = self.get_bits_LE(lim1, 8)
-        lim2 = self.get_bits_LE(lim2, 8)
-        err = self.get_bits_LE(err, 8)
-        v = [reading[i:i+4] for i in range(9, len(reading), 4)]
-        values = [struct.unpack('>f', el)[0] if not e else None for el, e in zip(v, err)]
-        cs = reading[-1]
-        return {'datetime': dt, 'values': values, 'errors': err, 'limits': lim2, 'cs': cs}
-
-    #!Метод жестко привязан к длине chunk в 42 байта. Вообще надо вынести декодирование значений в отдельный метод.
+     #!Метод жестко привязан к длине chunk в 42 байта. Вообще надо вынести декодирование значений в отдельный метод.
     def decrypt_data(self, binary_data: bytes) -> Dict[str, list]:
         indices = [0, 2, 6, 7, 8, 9, 13, 17, 21, 25, 29, 33, 37, 41, 42]
         temp_data = [binary_data[i1:i2] for i1, i2 in zip(indices[:-1], indices[1:])]
@@ -326,6 +314,21 @@ class Ar4Parser():
                 self.write_file(str_data, filename)
         return result
 
+    def get_int_date(self, binary_data: bytes) -> int:
+        return (struct.unpack('<H', binary_data)[0] >> 1)
+
+    def split_readings_by_dates(self, binary_data: List[bytes]) -> Dict[str, list]:
+        if not binary_data:
+            return {}
+        result = {}
+        for chunk in binary_data:
+            int_date = self.get_int_date(chunk[4:6])
+            if int_date in result:
+                result[int_date].append(chunk)
+            else:
+                result[int_date] = [chunk]
+        return result
+
     def create_filename(self, unit_number: int, start_timestamp: Tuple[int, int, int, int, int, int], end_timestamp: Tuple[int, int, int, int, int, int]) -> str:
         dt_format = '{:d}{:02d}{:02d}{:02d}{:02d}{:02d}' 
         sts = dt_format.format(*start_timestamp)
@@ -373,20 +376,27 @@ if __name__ == '__main__':
     ar4_parser = Ar4Parser()
     ar4_parser.config_parser(config)
     raw_data = ar4_parser.parse_ar4_file(filename)
-    chunks = ar4_parser.extract_time_period(raw_data['readings'], (2022, 6, 1, 0, 0, 0), (2024, 1, 1, 0, 0, 0))
+    dates = ar4_parser.split_readings_by_dates(raw_data['readings'])
+    s = 0
+    for k, v in dates.items():
+        for value in v:
+            a = ar4_parser.decrypt_reading(v[0])
+        s += len(v)
+    print(s, len(raw_data['readings']))
+    # chunks = ar4_parser.extract_time_period(raw_data['readings'], (2023, 1, 1, 0, 0, 0), (2024, 1, 1, 0, 0, 0))
 
-    time_start = perf_counter()
-    processed_data = [ar4_parser.decrypt_data(el) for el in chunks]
-    print('data decrypted in {:.2f} ms: {} lines.'.format((perf_counter() - time_start)*1e3, len(processed_data)))
+    # time_start = perf_counter()
+    # processed_data_1 = [ar4_parser.decrypt_data(el) for el in chunks]
+    # print('data decrypted in {:.2f} ms: {} lines.'.format((perf_counter() - time_start)*1e3, len(processed_data_1)))
 
-    time_start = perf_counter()
-    processed_data = [ar4_parser.decrypt_reading(el) for el in chunks]
-    print('readings decrypted in {:.2f} ms: {} lines.'.format((perf_counter() - time_start)*1e3, len(processed_data)))
+    # time_start = perf_counter()
+    # processed_data_2 = [ar4_parser.decrypt_reading(el) for el in chunks]
+    # print('readings decrypted in {:.2f} ms: {} lines.'.format((perf_counter() - time_start)*1e3, len(processed_data_2)))
 
-    time_start = perf_counter()
-    processed_data = [ar4_parser.decrypt_reading_2(el) for el in chunks]
-    print('readings decrypted 2 in {:.2f} ms: {} lines.'.format((perf_counter() - time_start)*1e3, len(processed_data)))
 
+    # s = bytes.fromhex('a52a749a5a5d010080447a04334479527c447553404465d0bb4452e6c143de39db42e3674101e36741b6')
+    # print(ar4_parser.decrypt_data(s))
+    # print(ar4_parser.decrypt_reading(s))
     # time_start = perf_counter()
     # processed_data = ar4_parser.extract_last_date_from_outside(raw_data, write_to_file=True)
     # processed_data = ar4_parser.extract_time_period_from_outside(raw_data, start_timestamp, end_timestamp, write_to_file=True)
