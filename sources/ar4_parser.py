@@ -108,7 +108,7 @@ class Ar4Parser():
         prefix, records = self.split_prefix_and_records(binary_data['adc_records'], _empty_byte)
         metadata = self.get_unit_number_and_creation_datetime(binary_data['header'])
         metadata.update(self.find_min_and_max_datetimes(records))
-        # metadata = self.get_metadata(binary_data['header'], records)
+        print(metadata)
         return {'metadata': metadata, 'prefix': prefix, 'records': records}
 
     def get_tm_datetime(self, binary_data: bytes) -> Tuple[int, int, int, int, int, int]:
