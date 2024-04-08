@@ -1,4 +1,5 @@
 from typing import List, Tuple, Dict, Optional, Union
+Unit_datetime = Tuple[int, int, int, int, int, int]
 
 from datetime import datetime, timedelta
 from time import perf_counter
@@ -86,7 +87,7 @@ class Ar4Parser():
         
         return {'header': big_chunks[0], 'adc_records': records}
 
-    # Maybe change prefix to overhead 
+    # Maybe change 'prefix' to 'overhead' 
     def split_prefix_and_records(self, adc_records: List[bytes], empty_byte: bytes) -> Dict[str, List[bytes]]:
         if not adc_records:
             return {}
@@ -99,49 +100,24 @@ class Ar4Parser():
                 break
         
         return (adc_records[:split_index], adc_records[split_index:])
-
-    def parse_ar4_file(self, filename: str, chunk_size:Optional[int]=None, 
-        empty_byte:Optional[bytes]=None) -> Union[Dict[str, List[bytes]], Dict[str, int]]:
-        _empty_byte = (empty_byte or self.empty_byte)
-        _chunk_size = (chunk_size or self.chunk_size)
-        binary_data = self.read_binary_file(filename, _chunk_size, _empty_byte)
-        prefix, records = self.split_prefix_and_records(binary_data['adc_records'], _empty_byte)
-        metadata = self.get_unit_number_and_creation_datetime(binary_data['header'])
-        metadata.update(self.find_min_and_max_datetimes(records))
-        print(metadata)
-        return {'metadata': metadata, 'prefix': prefix, 'records': records}
-
-    def get_tm_datetime(self, binary_data: bytes) -> Tuple[int, int, int, int, int, int]:
-        dt_int = struct.unpack('<I', binary_data)[0]
+    
+    def get_unit_datetime(self, i: int) -> Unit_datetime:
         mask = [0b111111, 0b111111, 0b11111, 0b11111, 0b1111, 0b11111]
         shift = [0, 6, 12, 17, 22, 26]
-        dt = [dt_int>>s & m for s, m in zip(shift, mask)]
+        dt = [i>>s & m for s, m in zip(shift, mask)]
         dt[-1] += 2000
         dt[-2] += 1
         dt[-3] += 1
-        # return datetime(*dt[::-1])
         return tuple(dt[::-1])
 
-    def get_unit_number_and_creation_datetime(self, header: bytes) -> Dict[str, Union[int, Tuple[int, int, int, int, int, int]]]:
+    def get_unit_number_and_creation_datetime(self, 
+        header: bytes) -> Dict[str, Union[int, Unit_datetime]]:
         timestamp, unit_number = struct.unpack('<2I', header[22:30])
         creation_datetime = self.get_unit_datetime(timestamp)
-        return {'creation_datetime': creation_datetime, 'unit_number': unit_number}
 
-    def get_metadata(self, header: bytes, readings: List[bytes]) -> Dict[str, int]:
-        creation_datetime = self.get_tm_datetime(header[22:26])
-        unit_number = struct.unpack('<I', header[26:30])[0]
-        min_and_max_datetimes = self.find_min_and_max_datetimes(readings)
-        metadata = {'creation_datetime': creation_datetime, 'unit_number': unit_number}
-        metadata.update(min_and_max_datetimes)
-        print(metadata)
-        return metadata
-
-    def show_metadata(self, metadata: Union[Dict[str, int], Dict[str, str], Dict[str, Tuple[int, int, int, int, int, int]]]) -> None:
-        print(f"\nUnit number: {metadata['unit_number']}\n")
-        str_list = ['{:02d}.{:02d}.{:d}'.format(*metadata['creation_datetime'][2::-1]),
-        '{:02d}:{:02d}:{:02d}'.format(*metadata['creation_datetime'][3:])]
-        print('Creation timestamp:\t{}'.format(' '.join(str_list)))
-        self.show_min_and_max_datetimes(metadata)
+        return {
+            'creation_datetime': creation_datetime, 
+            'unit_number': unit_number}
 
     def find_min_and_max_datetimes(self, binary_data: List[bytes]) -> Dict[str, Tuple[int, int, int, int, int, int]]:
         max_datetime = b'\x00\x00\x00\x01'
@@ -152,22 +128,57 @@ class Ar4Parser():
                 max_datetime = timestamp
             if timestamp < min_datetime:
                 min_datetime = timestamp
+        min_dt = struct.unpack('>I', min_datetime)[0]
+        max_dt = struct.unpack('>I', max_datetime)[0]
         return {
-            'min_datetime': self.get_tm_datetime(min_datetime[::-1]), 
-            'max_datetime': self.get_tm_datetime(max_datetime[::-1])}
+            'min_datetime': self.get_unit_datetime(min_dt), 
+            'max_datetime': self.get_unit_datetime(max_dt)}
+
+    def parse_ar4_file(self, filename: str, chunk_size:Optional[int]=None, 
+        empty_byte:Optional[bytes]=None) -> Union[Dict[str, List[bytes]], Dict[str, int]]:
+        _empty_byte = (empty_byte or self.empty_byte)
+        _chunk_size = (chunk_size or self.chunk_size)
+        binary_data = self.read_binary_file(filename, _chunk_size, _empty_byte)
+        prefix, records = self.split_prefix_and_records(binary_data['adc_records'], _empty_byte)
+        metadata = self.get_unit_number_and_creation_datetime(binary_data['header'])
+        metadata.update(self.find_min_and_max_datetimes(records))
+        print(metadata)
+        self.show_metadata(metadata)
+        return {'metadata': metadata, 'prefix': prefix, 'records': records}
+
+    def show_datetime(self, title: str, unit_datetime: Unit_datetime) -> None:
+        print('{0}\t{3:02d}.{2:02d}.{1:d} {4:02d}:{5:02d}:{6:02d}'.format(
+            title, *unit_datetime))
+        return None
+
+    def show_metadata(self, metadata):
+        print(f"\nUnit number: {metadata['unit_number']}\n")
+        self.show_datetime('Creation datetime:', metadata['creation_datetime'])
+        self.show_datetime('Minimum datetime: ', metadata['min_datetime'])
+        self.show_datetime('Maximum datetime: ', metadata['max_datetime'])
+        return None
+
+    # def get_tm_datetime(self, binary_data: bytes) -> Tuple[int, int, int, int, int, int]:
+    #     dt_int = struct.unpack('<I', binary_data)[0]
+    #     mask = [0b111111, 0b111111, 0b11111, 0b11111, 0b1111, 0b11111]
+    #     shift = [0, 6, 12, 17, 22, 26]
+    #     dt = [dt_int>>s & m for s, m in zip(shift, mask)]
+    #     dt[-1] += 2000
+    #     dt[-2] += 1
+    #     dt[-3] += 1
+    #     # return datetime(*dt[::-1])
+    #     return tuple(dt[::-1])
 
 
-    def show_min_and_max_datetimes(self, ts: Dict[str, Tuple[int, int, int, int, int, int]]) -> None:
-        str_list = ['{:02d}.{:02d}.{:d}'.format(*ts['min_datetime'][2::-1]),
-        '{:02d}:{:02d}:{:02d}'.format(*ts['min_datetime'][3:])]
-        # str_list = ['{:02d}.{:02d}.{:d}'.format(*self.get_tm_datetime(ts['min_datetime'])[2::-1]),
-        # '{:02d}:{:02d}:{:02d}'.format(*self.get_tm_datetime(ts['min_datetime'])[3:])]
-        print('Minimum timestamp:\t{}'.format(' '.join(str_list)))
-        str_list = ['{:02d}.{:02d}.{:d}'.format(*ts['max_datetime'][2::-1]),
-        '{:02d}:{:02d}:{:02d}'.format(*ts['max_datetime'][3:])]
-        # str_list = ['{:02d}.{:02d}.{:d}'.format(*self.get_tm_datetime(ts['max_datetime'])[2::-1]),
-        # '{:02d}:{:02d}:{:02d}'.format(*self.get_tm_datetime(ts['max_datetime'])[3:])]
-        print('Maximum timestamp:\t{}'.format(' '.join(str_list)))
+    # def get_metadata(self, header: bytes, readings: List[bytes]) -> Dict[str, int]:
+    #     creation_datetime = self.get_tm_datetime(header[22:26])
+    #     unit_number = struct.unpack('<I', header[26:30])[0]
+    #     min_and_max_datetimes = self.find_min_and_max_datetimes(readings)
+    #     metadata = {'creation_datetime': creation_datetime, 'unit_number': unit_number}
+    #     metadata.update(min_and_max_datetimes)
+    #     print(metadata)
+    #     return metadata
+
 
     def extract_one_date(self, binary_data: List[bytes], timestamp: Tuple[int, int, int, int, int, int]) -> List[bytes]:
         start_timestamp = timestamp[:3] + (0, 0, 0)
@@ -178,26 +189,18 @@ class Ar4Parser():
         return self.extract_time_period(binary_data, start_timestamp, end_timestamp)            
 
 
-    def get_bits(self, binary_data: int, n: int) -> List[int]:
-        result = []
-        for i in range(n):
-            result.append(binary_data >> i & 1)
-        return result[::-1]
+    # def get_bits(self, binary_data: int, n: int) -> List[int]:
+    #     result = []
+    #     for i in range(n):
+    #         result.append(binary_data >> i & 1)
+    #     return result[::-1]
 
     def get_bits_LE(self, i: int, bits_amount: int) -> List[int]:
         return [i >> j & 1 for j in range(bits_amount)]
 
-    def convert_to_float(self, binary_data: bytes) -> float:
-        return struct.unpack('!f',binary_data)[0]
+    # def convert_to_float(self, binary_data: bytes) -> float:
+    #     return struct.unpack('!f',binary_data)[0]
 
-    def get_unit_datetime(self, i: int) -> Tuple[int, int, int, int, int, int]:
-        mask = [0b111111, 0b111111, 0b11111, 0b11111, 0b1111, 0b11111]
-        shift = [0, 6, 12, 17, 22, 26]
-        dt = [i>>s & m for s, m in zip(shift, mask)]
-        dt[-1] += 2000
-        dt[-2] += 1
-        dt[-3] += 1
-        return tuple(dt[::-1])
 
     #! Если количество каналов 8, то ошибки и уставки помещаются в 1 байт. Не понятно, как будет выглядеть все это для другого количества каналов (4 и 16)
     # По идее, надо передавать в метод второй параметр frm = f'>{int((len(reading[9:]) - 1)/4)}fB' для чтения значений каналов, но в таком случае код
@@ -392,6 +395,8 @@ if __name__ == '__main__':
     ar4_parser = Ar4Parser()
     ar4_parser.config_parser(config)
     raw_data = ar4_parser.parse_ar4_file(filename)
+
+   
     # dates = ar4_parser.split_readings_by_dates(raw_data['readings'])
     # s = 0
     # for k, v in dates.items():
