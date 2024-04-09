@@ -36,7 +36,22 @@ def read_settings(filename, _sep):
             result['new_time'] = datetime.strptime(settings['new_time'], '%H:%M:%S')
         except ValueError:
             print(f'Check {filename}: wrong <new_time>')
-    return result   
+    return result  
+
+# !TODO: добавить блоки try/except
+def read_settings_new(filename: str, sep: str) -> dict:
+    result = {}
+    try:
+        with open(filename, 'r') as f:
+            for line in f:
+                key, value = line.rstrip().split(sep)
+                result[key] = value
+    except IOError as err:
+        print(err)
+    result['chunk_size'] = int(result['chunk_size'])
+    result['empty_byte'] = bytes.fromhex(result['empty_byte'])
+    result['channels_amount'] = int(result['channels_amount'])
+    return result
 
 def create_parser():
     parser = ArgumentParser()
@@ -55,6 +70,10 @@ def create_parser():
 
 if __name__ == '__main__':
     print('This is tm5103 data processing!')
+
+    config_file = 'settings.csv'
+    settings = read_settings_new(config_file, '=')
+    print(settings)
     # print(read_settings('settings.csv', ';'))
     # argparser = create_parser()
     # # args = argparser.parse_args(['-s', './(2023_09_22)_RA.txt'])
