@@ -1,3 +1,6 @@
-output_dir;data_files
-channel_count;8
-new_time; 08:10:36
+chunk_size=256
+empty_byte=ff
+channels_amount=8
+file_sep=;
+datetime_format={:d}{:02d}{:02d}{:02d}{:02d}{:02d}
+file_ext=csv
