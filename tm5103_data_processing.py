@@ -3,6 +3,7 @@
 import csv
 from datetime import datetime
 from argparse import ArgumentParser
+from sources.ar4_parser import Ar4Parser
 # from sources.tm5103_data_parser import TM5103DataParser
 # from sources.tm5103_time_changer import TM5103TimeChanger
 # from sources.tm5103_graph import TM5103GraphMaker
@@ -56,13 +57,14 @@ def read_settings_new(filename: str, sep: str) -> dict:
 def create_parser():
     parser = ArgumentParser()
     group = parser.add_mutually_exclusive_group()
-    group.add_argument('-s', '--split', action='store_true')
-    group.add_argument('-a', '--average', action='store_true')
-    group.add_argument('-t', '--time', action='store_true')
-    group.add_argument('-g', '--graph', action='store_true')
-    group.add_argument('-e', '--extract', action='store_true')
-    group.add_argument('-r', '--reduce', action='store_true')
-    group.add_argument('-c', '--columns', action='store_true')
+    group.add_argument('-l', '--last_date', action='store_true')
+    # group.add_argument('-s', '--split', action='store_true')
+    # group.add_argument('-a', '--average', action='store_true')
+    # group.add_argument('-t', '--time', action='store_true')
+    # group.add_argument('-g', '--graph', action='store_true')
+    # group.add_argument('-e', '--extract', action='store_true')
+    # group.add_argument('-r', '--reduce', action='store_true')
+    # group.add_argument('-c', '--columns', action='store_true')
     parser.add_argument('filename', nargs='?')
 
     return parser
@@ -74,8 +76,16 @@ if __name__ == '__main__':
     config_file = 'settings.csv'
     settings = read_settings_new(config_file, '=')
     print(settings)
-    # print(read_settings('settings.csv', ';'))
-    # argparser = create_parser()
+    ar4_parser = Ar4Parser()
+    ar4_parser.config_parser(settings)
+    argparser = create_parser()
+    args = argparser.parse_args(['-l', './sources/TM100514_B.AR4'])
+    if args.last_date:
+        raw_data = ar4_parser.parse_ar4_file(args.filename)
+        decrypted_records = ar4_parser.extract_last_date_from_outside(raw_data)
+        print(decrypted_records[0])
+        print(decrypted_records[-1])
+
     # # args = argparser.parse_args(['-s', './(2023_09_22)_RA.txt'])
     # # args = argparser.parse_args(['-g', './data/2023_09_22.txt'])
     # # args = argparser.parse_args(['-e', './(2023_09_22)_RA.txt'])
