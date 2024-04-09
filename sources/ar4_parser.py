@@ -207,7 +207,7 @@ class Ar4Parser():
         return self.extract_time_period(
             records, start_datetime, end_datetime)        
 
-    def extract_last_date(self, raw_date: dict) -> List[bytes]:
+    def extract_last_date(self, raw_data: dict) -> List[bytes]:
         return self.extract_one_date(
             raw_data['records'], raw_data['metadata']['max_datetime'])
 
