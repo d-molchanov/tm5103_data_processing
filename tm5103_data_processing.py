@@ -45,7 +45,8 @@ def read_settings_new(filename: str, sep: str) -> dict:
     try:
         with open(filename, 'r') as f:
             for line in f:
-                key, value = line.rstrip().split(sep)
+                if line[-1] == '\n': line = line[:-1]
+                key, value = line.split(sep)
                 result[key] = value
     except IOError as err:
         print(err)
@@ -56,8 +57,13 @@ def read_settings_new(filename: str, sep: str) -> dict:
 
 def create_parser():
     parser = ArgumentParser()
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument('-l', '--last_date', action='store_true')
+    # group = parser.add_mutually_exclusive_group()
+    group = parser.add_argument_group()
+    group.add_argument('-l', '--last-date', action='store_true')
+    group.add_argument('-t', '--time-period', action='store_true')
+    group.add_argument('-w', '--write-to-file', action='store_true')
+    group.add_argument('-s', '--start-datetime', type=str)
+    group.add_argument('-e', '--end-datetime', type=str)
     # group.add_argument('-s', '--split', action='store_true')
     # group.add_argument('-a', '--average', action='store_true')
     # group.add_argument('-t', '--time', action='store_true')
@@ -65,12 +71,12 @@ def create_parser():
     # group.add_argument('-e', '--extract', action='store_true')
     # group.add_argument('-r', '--reduce', action='store_true')
     # group.add_argument('-c', '--columns', action='store_true')
-    parser.add_argument('filename', nargs='?')
+    # parser.add_argument('filename', nargs='?')
+    parser.add_argument('-f', '--filename', type=str, required=True)
 
     return parser
 
-
-if __name__ == '__main__':
+def main():
     print('This is tm5103 data processing!')
 
     config_file = 'settings.csv'
@@ -79,12 +85,32 @@ if __name__ == '__main__':
     ar4_parser = Ar4Parser()
     ar4_parser.config_parser(settings)
     argparser = create_parser()
-    args = argparser.parse_args(['-l', './sources/TM100514_B.AR4'])
+    # args = argparser.parse_args(['-f', './sources/TM100514_B.AR4', '-l'])
+    args = argparser.parse_args(['-f', './sources/TM100514_B.AR4', '-t', '-s', '05.10.2023 00:00:00', '-e', '06.10.2023 00:00:00', '-w'])
+    print(args)
     if args.last_date:
         raw_data = ar4_parser.parse_ar4_file(args.filename)
-        decrypted_records = ar4_parser.extract_last_date_from_outside(raw_data)
-        print(decrypted_records[0])
-        print(decrypted_records[-1])
+        decrypted_records = ar4_parser.extract_last_date_from_outside(
+            raw_data,
+            sep=settings['file_sep'],
+            write_to_file=args.write_to_file)
+    if args.time_period:
+        # !TODO: add try/except blocks
+        sdt = datetime.strptime(args.start_datetime, '%d.%m.%Y %H:%M:%S')
+        start_datetime = sdt.timetuple()[:6]
+        edt = datetime.strptime(args.end_datetime, '%d.%m.%Y %H:%M:%S')
+        end_datetime = edt.timetuple()[:6]
+        raw_data = ar4_parser.parse_ar4_file(args.filename)
+        decrypted_records = ar4_parser.extract_time_period_from_outside(
+            raw_data, start_datetime, end_datetime,
+            sep=settings['file_sep'],
+            write_to_file=args.write_to_file)
+    while True:
+        i = input('Enter <q> for exit.\n')
+        if i == 'q': break
+
+if __name__ == '__main__':
+    main()
 
     # # args = argparser.parse_args(['-s', './(2023_09_22)_RA.txt'])
     # # args = argparser.parse_args(['-g', './data/2023_09_22.txt'])
