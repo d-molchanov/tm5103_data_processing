@@ -64,6 +64,7 @@ def create_parser():
     group.add_argument('-w', '--write-to-file', action='store_true')
     group.add_argument('-s', '--start-datetime', type=str)
     group.add_argument('-e', '--end-datetime', type=str)
+    group.add_argument('-i', '--interactive', action='store_true')
     # group.add_argument('-s', '--split', action='store_true')
     # group.add_argument('-a', '--average', action='store_true')
     # group.add_argument('-t', '--time', action='store_true')
@@ -76,18 +77,46 @@ def create_parser():
 
     return parser
 
+def my_cli(decrypted_records: list[dict]) -> None:
+    print('Enter <r [int]> to reduce decrypted_records' )
+    print('Enter <q> for exit' )
+    while True:
+            input_str = input('-> ')
+            if input_str == 'q': break
+            my_args = input_str.split()
+            if my_args[0] == 'r':
+                if len(my_args) > 1:
+                    try:
+                        n = int(my_args[1])
+                    except ValueError as err:
+                        n = 1
+                        print(err)
+                    reduced_records = [r for i, r in enumerate(decrypted_records) if i % n == 0]
+                    print(f'{len(decrypted_records)} records were reduced to {len(reduced_records)} records.')
+                else:
+                    print('Number should be placed after <r> flag.')
+            if my_args[0] == 'e':
+                if len(my_args) > 4:
+                    sdt = datetime.strptime(' '.join([my_args[1], my_args[2]]), '%d.%m.%Y %H:%M:%S').timetuple()[:6]
+                    edt = datetime.strptime(' '.join([my_args[3], my_args[4]]), '%d.%m.%Y %H:%M:%S').timetuple()[:6]
+                    extracted_records = [r for r in decrypted_records if sdt <= r['datetime'] < edt]
+                    print(f'{len(extracted_records)} records were extracted from {len(decrypted_records)} records.')
+                else:
+                    print('Not enough information of datetime.')
+
 def main():
     print('This is tm5103 data processing!')
 
     config_file = 'settings.csv'
     settings = read_settings_new(config_file, '=')
-    print(settings)
+    # print(settings)
     ar4_parser = Ar4Parser()
     ar4_parser.config_parser(settings)
     argparser = create_parser()
     # args = argparser.parse_args(['-f', './sources/TM100514_B.AR4', '-l'])
-    args = argparser.parse_args(['-f', './sources/TM100514_B.AR4', '-t', '-s', '05.10.2023 00:00:00', '-e', '06.10.2023 00:00:00', '-w'])
-    print(args)
+    args = argparser.parse_args(['-f', './sources/TM100514_B.AR4', '-t', '-s', '05.10.2023 00:00:00', '-e', '06.10.2023 00:00:00', '-wi'])
+    # print(args)
+    decrypted_records = []
     if args.last_date:
         raw_data = ar4_parser.parse_ar4_file(args.filename)
         decrypted_records = ar4_parser.extract_last_date_from_outside(
@@ -105,9 +134,8 @@ def main():
             raw_data, start_datetime, end_datetime,
             sep=settings['file_sep'],
             write_to_file=args.write_to_file)
-    while True:
-        i = input('Enter <q> for exit.\n')
-        if i == 'q': break
+    if args.interactive:
+        my_cli(decrypted_records)
 
 if __name__ == '__main__':
     main()
