@@ -4,6 +4,7 @@
 import os
 import time
 from datetime import datetime, timedelta
+from typing import List, Union
 
 import bisect
 import argparse
@@ -38,6 +39,9 @@ class GraphMaker:
                 for v, el in zip(value_matrix, split_line[2:]):
                     v.append(self.parse_float(el.replace(',', '.')))
         return {'time': time_list, 'values': value_matrix}
+
+    def create_graph_new(self, datetimes: List[datetime], values: List[List[Union[float, None]]], settings: dict) -> None:
+        pass
 
     def create_graph(self, header, time_list, value_matrix, graph_title, annotation, output_file):
         print('Start creating diagram')
@@ -169,13 +173,15 @@ class GraphMaker:
 
 if __name__ == '__main__':
 
-    target_dir = os.path.abspath('D:/JIHT/!2024/!Ларина/!Processed_ED/(2024_03_13)')
+    # target_dir = os.path.abspath('D:/JIHT/!2024/!Ларина/!Processed_ED/(2024_03_13)')
+    target_dir = os.path.abspath('.')
     prefix = os.path.split(target_dir)[1][1:-1]
     suffixes = ['A', 'A_partial', 'B', 'B_partial']
     
     ext = '.csv'
-    filenames = [os.path.join(target_dir, f"{'_'.join([prefix, s])}{ext}") for s in suffixes]
-    file_index = 3
+    # filenames = [os.path.join(target_dir, f"{'_'.join([prefix, s])}{ext}") for s in suffixes]
+    filenames = ['2023_10_05.csv']
+    file_index = 0
     print(*filenames, sep='\n')
     filename = filenames[file_index]
     title_left = '.'.join(reversed(prefix.split('_')))
