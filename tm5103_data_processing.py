@@ -78,8 +78,9 @@ def create_parser():
     return parser
 
 def my_cli(decrypted_records: list[dict]) -> None:
-    print('Enter <r [int]> to reduce decrypted_records' )
-    print('Enter <q> for exit' )
+    print('Enter <r [int]> to reduce decrypted_records.' )
+    print('Enter <e [start datetime] [end datetime]> to extract time period.')
+    print('Enter <q> for exit.' )
     while True:
             input_str = input('-> ')
             if input_str == 'q': break
