@@ -6,6 +6,8 @@ import time
 from datetime import datetime, timedelta
 from typing import List, Union
 
+import copy
+
 from collections import abc
 import json
 import bisect
@@ -150,7 +152,11 @@ class GraphMaker:
         return {'time': time_list, 'values': value_matrix}
 
     def create_graph_new(self, datetimes: List[datetime], values: List[List[Union[float, None]]], settings: Union[dict, None]=None) -> None:
-        _settings = (settings or self.settings)
+        if not settings:
+            _settings = self.settings
+        else:
+            _settings = copy.deepcopy(self.settings)
+            self.update_dict(_settings, settings)
         fig, ax = plt.subplots()
         plt.title(_settings['title'], **_settings['title settings'])
         ax.grid(**_settings['major grid'])
@@ -340,8 +346,8 @@ def main():
         'title settings': {'fontsize': 72}
     }
     # graph_maker.config('graph_settings.json')
-    graph_maker.config(sttngs)
-    graph_maker.create_graph_new(data['time'], data['values']) 
+    # graph_maker.config(sttngs)
+    graph_maker.create_graph_new(data['time'], data['values'], settings=sttngs) 
     # graph_maker.config({'x lim': [None, None]})
     # graph_maker.export_config()
     # graph_maker.create_graph_old(data['time'], data['values'], settings) 

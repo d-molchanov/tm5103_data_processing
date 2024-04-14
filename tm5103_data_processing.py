@@ -1,9 +1,10 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 import csv
-from datetime import datetime
+from datetime import datetime, timedelta
 from argparse import ArgumentParser
 from sources.ar4_parser import Ar4Parser
+from sources.graph_maker import GraphMaker
 # from sources.tm5103_data_parser import TM5103DataParser
 # from sources.tm5103_time_changer import TM5103TimeChanger
 # from sources.tm5103_graph import TM5103GraphMaker
@@ -65,6 +66,7 @@ def create_parser():
     group.add_argument('-s', '--start-datetime', type=str)
     group.add_argument('-e', '--end-datetime', type=str)
     group.add_argument('-i', '--interactive', action='store_true')
+    group.add_argument('-g', '--graph', action='store_true')
     # group.add_argument('-s', '--split', action='store_true')
     # group.add_argument('-a', '--average', action='store_true')
     # group.add_argument('-t', '--time', action='store_true')
@@ -115,7 +117,7 @@ def main():
     ar4_parser.config_parser(settings)
     argparser = create_parser()
     # args = argparser.parse_args(['-f', './sources/TM100514_B.AR4', '-l'])
-    args = argparser.parse_args(['-f', './sources/TM100514_B.AR4', '-t', '-s', '05.10.2023 00:00:00', '-e', '06.10.2023 00:00:00', '-wi'])
+    args = argparser.parse_args(['-f', './sources/TM100514_B.AR4', '-t', '-s', '05.10.2023 00:00:00', '-e', '06.10.2023 00:00:00', '-wg'])
     # print(args)
     decrypted_records = []
     if args.last_date:
@@ -135,6 +137,26 @@ def main():
             raw_data, start_datetime, end_datetime,
             sep=settings['file_sep'],
             write_to_file=args.write_to_file)
+    if args.graph:
+        graph_maker = GraphMaker()
+        datetimes = []
+        values = [[] for el in range(len(decrypted_records[0]['readings']))]
+        for record in decrypted_records:
+            datetimes.append(datetime(*record['datetime']))
+            for v, r in zip(values, record['readings']):
+                v.append(r)
+        output_filename = '14.png'
+        sttngs = {
+            'labels': [f'ТП{i}' for i in range(1, 9)],
+            'save to file': True,
+            # 'save to file': True,
+            'x lim': [datetimes[0] - timedelta(minutes=10), datetimes[-1] + timedelta(minutes=10)],
+            'output file': output_filename,
+            'title': 'Pyro!'#, 
+            # 'title settings': {'fontsize': 72}
+        }
+        graph_maker.create_graph_new(datetimes, values, settings=sttngs)
+
     if args.interactive:
         my_cli(decrypted_records)
 
