@@ -1,0 +1,107 @@
+{
+    "title": "",
+    "title settings": {
+        "fontsize": 14,
+        "loc": "center",
+        "pad": 40
+    },
+    "major grid": {
+        "which": "major",
+        "c": "#aaaaaa50",
+        "ls": "-"
+    },
+    "minor grid": {
+        "which": "minor",
+        "c": "#aaaaaa50",
+        "ls": ":"
+    },
+    "x major formatter": "%H:%M",
+    "x major locator": {
+        "byminute": [
+            0,
+            60
+        ]
+    },
+    "x minor locator": {
+        "byminute": [
+            10,
+            20,
+            30,
+            40,
+            50
+        ]
+    },
+    "x label": "Time",
+    "x label settings": {
+        "fontsize": 14
+    },
+    "y label": "T, \u2103",
+    "y label settings": {
+        "fontsize": 14,
+        "rotation": 0
+    },
+    "y major locator": 100,
+    "y minor locator": 20,
+    "x lim": [
+        null,
+        null
+    ],
+    "y lim": [
+        0,
+        1100
+    ],
+    "labels fontsize": 14,
+    "tight layout": true,
+    "fig size": [
+        14,
+        10
+    ],
+    "fig size settings": {
+        "forward": true
+    },
+    "colors": [
+        "#515151ff",
+        "#f14040ff",
+        "#1a6fdfff",
+        "#37ad6bff",
+        "#b177deff",
+        "#cc9900ff",
+        "#00ccbbff",
+        "#7d4e4eff"
+    ],
+    "labels": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    ],
+    "plot": {
+        "linewidth": 1
+    },
+    "legend": {
+        "bbox_to_anchor": [
+            0,
+            1,
+            1,
+            0
+        ],
+        "loc": "lower left",
+        "mode": "expand",
+        "ncol": 8,
+        "fontsize": 14,
+        "borderaxespad": 0.5
+    },
+    "tick_params": {
+        "axis": "x",
+        "labelrotation": 0
+    },
+    "save to file": true,
+    "output file": "output.png",
+    "savefig": {
+        "bbox_inches": "tight"
+    }
+}
