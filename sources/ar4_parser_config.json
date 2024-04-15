@@ -1,0 +1,8 @@
+{
+    "chunk_size": 256,
+    "empty_byte": "ff",
+    "channels_amount": 8,
+    "file_sep": ";",
+    "datetime_format": "{:d}{:02d}{:02d}{:02d}{:02d}{:02d}",
+    "file_ext": "csv"
+}
