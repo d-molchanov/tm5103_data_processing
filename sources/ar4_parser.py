@@ -5,6 +5,8 @@ from datetime import datetime, timedelta
 from time import perf_counter
 import struct
 import csv
+import json
+import os
 
 class Ar4Parser():
 
@@ -15,6 +17,29 @@ class Ar4Parser():
         self.file_sep = ';'
         self.datetime_format = '{:d}{:02d}{:02d}{:02d}{:02d}{:02d}' 
         self.file_ext = 'csv'
+
+    def find_config_file(self, target_dir: str) -> None:
+        pass
+
+    def export_config(self, dir_to_export: Union[str, None]=None):
+        _dir_to_export = (dir_to_export or '.')
+        config = {
+            'chunk_size': self.chunk_size,
+            'empty_byte': self.empty_byte.hex(),
+            'channels_amount': self.channels_amount,
+            'file_sep': self.file_sep,
+            'datetime_format': self.datetime_format,
+            'file_ext': self.file_ext
+        }
+        abs_path = os.path.abspath(_dir_to_export)
+        filename = os.path.join(abs_path, 'ar4_parser_config.json')
+        try:
+            with open(filename, 'w') as f:
+                json.dump(config, f, indent=4)
+            print(f'Config is saved at {filename}')
+        except IOError as err:
+            print(err)
+
 
     def config_parser(self, config: Dict[str, Union[str, int]]) -> None:
         if 'chunk_size' in config:
@@ -312,7 +337,7 @@ class Ar4Parser():
 
     def extract_time_period_from_outside(self, raw_data: dict,
         start_datetime: Unit_datetime, end_datetime: Unit_datetime,
-        sep=None, write_to_file:bool =False):
+        sep=None, write_to_file:bool=False):
         
         file_sep = (sep or self.file_sep)
         records = self.extract_time_period(
@@ -348,6 +373,7 @@ if __name__ == '__main__':
     end_datetime = (2023, 10, 6)
 
     ar4_parser = Ar4Parser()
+    ar4_parser.export_config('..')
     ar4_parser.config_parser(config)
     raw_data = ar4_parser.parse_ar4_file(filename)
 
