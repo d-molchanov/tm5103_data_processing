@@ -16,7 +16,7 @@ def read_settings(filename, _sep):
         'channel_count': 4,
         'new_time': datetime.strptime('07:00:00', '%H:%M:%S')
     }
-    settings = dict()
+    settings = {}
     try:
         with open(filename, 'r') as f:
             reader = csv.reader(f, delimiter=_sep)
@@ -38,7 +38,8 @@ def read_settings(filename, _sep):
             result['new_time'] = datetime.strptime(settings['new_time'], '%H:%M:%S')
         except ValueError:
             print(f'Check {filename}: wrong <new_time>')
-    return result  
+    return result
+
 
 # !TODO: добавить блоки try/except
 def read_settings_new(filename: str, sep: str) -> dict:
@@ -46,7 +47,8 @@ def read_settings_new(filename: str, sep: str) -> dict:
     try:
         with open(filename, 'r') as f:
             for line in f:
-                if line[-1] == '\n': line = line[:-1]
+                if line[-1] == '\n':
+                    line = line[:-1]
                 key, value = line.split(sep)
                 result[key] = value
     except IOError as err:
@@ -55,6 +57,7 @@ def read_settings_new(filename: str, sep: str) -> dict:
     result['empty_byte'] = bytes.fromhex(result['empty_byte'])
     result['channels_amount'] = int(result['channels_amount'])
     return result
+
 
 def create_parser():
     parser = ArgumentParser()
@@ -79,33 +82,36 @@ def create_parser():
 
     return parser
 
+
 def my_cli(decrypted_records: list[dict]) -> None:
-    print('Enter <r [int]> to reduce decrypted_records.' )
+    print('Enter <r [int]> to reduce decrypted_records.')
     print('Enter <e [start datetime] [end datetime]> to extract time period.')
-    print('Enter <q> for exit.' )
+    print('Enter <q> for exit.')
     while True:
-            input_str = input('-> ')
-            if input_str == 'q': break
-            my_args = input_str.split()
-            if my_args[0] == 'r':
-                if len(my_args) > 1:
-                    try:
-                        n = int(my_args[1])
-                    except ValueError as err:
-                        n = 1
-                        print(err)
-                    reduced_records = [r for i, r in enumerate(decrypted_records) if i % n == 0]
-                    print(f'{len(decrypted_records)} records were reduced to {len(reduced_records)} records.')
-                else:
-                    print('Number should be placed after <r> flag.')
-            if my_args[0] == 'e':
-                if len(my_args) > 4:
-                    sdt = datetime.strptime(' '.join([my_args[1], my_args[2]]), '%d.%m.%Y %H:%M:%S').timetuple()[:6]
-                    edt = datetime.strptime(' '.join([my_args[3], my_args[4]]), '%d.%m.%Y %H:%M:%S').timetuple()[:6]
-                    extracted_records = [r for r in decrypted_records if sdt <= r['datetime'] < edt]
-                    print(f'{len(extracted_records)} records were extracted from {len(decrypted_records)} records.')
-                else:
-                    print('Not enough information of datetime.')
+        input_str = input('-> ')
+        if input_str == 'q':
+            break
+        my_args = input_str.split()
+        if my_args[0] == 'r':
+            if len(my_args) > 1:
+                try:
+                    n = int(my_args[1])
+                except ValueError as err:
+                    n = 1
+                    print(err)
+                reduced_records = [r for i, r in enumerate(decrypted_records) if i % n == 0]
+                print(f'{len(decrypted_records)} records were reduced to {len(reduced_records)} records.')
+            else:
+                print('Number should be placed after <r> flag.')
+        if my_args[0] == 'e':
+            if len(my_args) > 4:
+                sdt = datetime.strptime(' '.join([my_args[1], my_args[2]]), '%d.%m.%Y %H:%M:%S').timetuple()[:6]
+                edt = datetime.strptime(' '.join([my_args[3], my_args[4]]), '%d.%m.%Y %H:%M:%S').timetuple()[:6]
+                extracted_records = [r for r in decrypted_records if sdt <= r['datetime'] < edt]
+                print(f'{len(extracted_records)} records were extracted from {len(decrypted_records)} records.')
+            else:
+                print('Not enough information of datetime.')
+
 
 def main():
     print('This is tm5103 data processing!')
@@ -152,13 +158,14 @@ def main():
             # 'save to file': True,
             'x lim': [datetimes[0] - timedelta(minutes=10), datetimes[-1] + timedelta(minutes=10)],
             'output file': output_filename,
-            'title': 'Pyro!'#, 
+            'title': 'Pyro!'#,
             # 'title settings': {'fontsize': 72}
         }
         graph_maker.create_graph_new(datetimes, values, settings=sttngs)
 
     if args.interactive:
         my_cli(decrypted_records)
+
 
 if __name__ == '__main__':
     main()
@@ -167,7 +174,7 @@ if __name__ == '__main__':
     # # args = argparser.parse_args(['-g', './data/2023_09_22.txt'])
     # # args = argparser.parse_args(['-e', './(2023_09_22)_RA.txt'])
     # args = argparser.parse_args(['-c', './(2023_09_22).txt'])
-    
+
     # if args.split:
     #     print('Split <%s>' % args.filename)
     #     output_dir = 'data_files'
@@ -179,7 +186,7 @@ if __name__ == '__main__':
     #     date = '29.09.2023'
     #     data = data_parser.extract_single_date(args.filename, date)
     #     if data:
-    #         output_file = f'({"_".join(reversed(date.split(".")))}).txt' 
+    #         output_file = f'({"_".join(reversed(date.split(".")))}).txt'
     #         data_parser.write_data_to_file(data, output_file)
     #     else:
     #         print(f'There is no such a date <{date}> in <{args.filename}>')

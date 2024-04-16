@@ -334,6 +334,7 @@ def main():
     output_filename = f'{bname}.png'
 
     graph_maker = GraphMaker()
+    # graph_maker.export_config()
     data = graph_maker.parse_file(filename)
     # graph_maker.export_config()
     sttngs = {
