@@ -6,10 +6,15 @@ from typing import List, Tuple, Dict, Optional, Union
 from time import perf_counter
 from datetime import datetime, timedelta
 
-Unit_datetime = Tuple[int, int, int, int, int, int]
+UnitDatetime = Tuple[int, int, int, int, int, int]
 
 
 class Ar4Parser():
+    """Класс для декодирования архива с расширением .AR4,
+       извлеченного из внутренний памяти аналогово-цифрового
+       преобразователя <unit_name> компании <company_name>.
+
+    """
 
     def __init__(self):
         self.chunk_size = 256
@@ -23,6 +28,9 @@ class Ar4Parser():
         pass
 
     def export_config(self, dir_to_export: Union[str, None] = None):
+        """Метод для экспорта конфигурации класса в JSON-файл.
+
+        """
         _dir_to_export = (dir_to_export or '.')
         config = {
             'chunk_size': self.chunk_size,
@@ -42,6 +50,9 @@ class Ar4Parser():
             print(err)
 
     def read_config(self, filename: str) -> dict:
+        """Метод для чтения JSON-файла, содержащего параметры
+           экземпляра класса Ar4Parser.
+        """
         abs_path = os.path.abspath(filename)
         config = {}
         try:
@@ -49,12 +60,14 @@ class Ar4Parser():
                 config = json.load(f)
             print(f'Config was read from {abs_path}')
         except IOError:
-            print(f'Unable to find {abs_path}. Check, that filename of config file is correct.')
+            print(f'Unable to find {abs_path}.')
         if 'empty_byte' in config:
             config['empty_byte'] = bytes.fromhex(config['empty_byte'])
         return config
 
     def config_parser(self, config: Dict[str, Union[str, int]]) -> None:
+        """Метод для конфигурации экземпляра класса Ar4Parser.
+        """
         if 'chunk_size' in config:
             self.chunk_size = config['chunk_size']
         if 'empty_byte' in config:
@@ -70,6 +83,8 @@ class Ar4Parser():
         return None
 
     def read_in_chunks(self, filename: str, chunk_size: int) -> List[bytes]:
+        """Метод для чтения бинарного файла по частям
+        """
         time_start = perf_counter()
         result = []
         try:
@@ -85,7 +100,13 @@ class Ar4Parser():
         return result
 
         # Check working with full archive!
-    def cut_off_empty_tail(self, chunks: List[bytes], chunk_size: int, empty_byte: bytes) -> List[bytes]:
+    def cut_off_empty_tail(
+        self, chunks: List[bytes], chunk_size: int, empty_byte: bytes
+    ) -> List[bytes]:
+        """Метод для отсечения незаполненного полезной информацией
+           окончания архива
+
+        """
         result: List[bytes] = []
         if not chunks:
             return result
@@ -100,11 +121,13 @@ class Ar4Parser():
     def extract_records(
         self, binary_data: bytes, empty_byte: bytes
     ) -> List[bytes]:
+        """Метод для разбиения бинарной строки на записи
+        """
         result = []
         i = 0
         while i < len(binary_data):
-            # if binary_data[i] != empty_byte[0]:
-            if binary_data[i] != 255:
+            if binary_data[i] != empty_byte[0]:
+            # if binary_data[i] != 255:
                 msg_length = binary_data[i+1]
                 result.append(binary_data[i:i+msg_length])
                 i += msg_length
@@ -116,15 +139,17 @@ class Ar4Parser():
     def read_binary_file(
         self,
         filename: str,
-        chunk_size: int, 
+        chunk_size: int,
         empty_byte: bytes
     ) -> Dict[str, Union[List[bytes], bytes, None]]:
-
+        """Метод для чтения бинарного файла"""
         big_chunks = self.read_in_chunks(filename, chunk_size)
         if not big_chunks:
             return {'header': None, 'adc_records': []}
 
-        data_chunks = self.cut_off_empty_tail(big_chunks, chunk_size, empty_byte)
+        data_chunks = self.cut_off_empty_tail(
+            big_chunks, chunk_size, empty_byte
+        )
         records = []
         for chunk in data_chunks[1:]:
             records.extend(self.extract_records(chunk, empty_byte))
@@ -135,6 +160,7 @@ class Ar4Parser():
     def split_prefix_and_records(
         self, adc_records: List[bytes], empty_byte: bytes
     ) -> Dict[str, List[bytes]]:
+        """Метод для разбиения метаданных и записей"""
         if not adc_records:
             return {}
         not_datetime = 4*empty_byte
@@ -147,7 +173,8 @@ class Ar4Parser():
 
         return (adc_records[:split_index], adc_records[split_index:])
 
-    def get_unit_datetime(self, i: int) -> Unit_datetime:
+    def get_unit_datetime(self, i: int) -> UnitDatetime:
+        """Метод для получения времени и даты в формате <unit_name>"""
         mask = [0b111111, 0b111111, 0b11111, 0b11111, 0b1111, 0b11111]
         shift = [0, 6, 12, 17, 22, 26]
         dt = [i >> s & m for s, m in zip(shift, mask)]
@@ -159,12 +186,12 @@ class Ar4Parser():
     def get_unit_number_and_creation_datetime(
         self,
         header: bytes
-    ) -> Dict[str, Union[int, Unit_datetime]]:
+    ) -> Dict[str, Union[int, UnitDatetime]]:
         timestamp, unit_number = struct.unpack('<2I', header[22:30])
         creation_datetime = self.get_unit_datetime(timestamp)
 
         return {
-            'creation_datetime': creation_datetime, 
+            'creation_datetime': creation_datetime,
             'unit_number': unit_number}
 
     def find_min_and_max_datetimes(
@@ -181,7 +208,7 @@ class Ar4Parser():
         min_dt = struct.unpack('>I', min_datetime)[0]
         max_dt = struct.unpack('>I', max_datetime)[0]
         return {
-            'min_datetime': self.get_unit_datetime(min_dt), 
+            'min_datetime': self.get_unit_datetime(min_dt),
             'max_datetime': self.get_unit_datetime(max_dt)}
 
     def parse_ar4_file(
@@ -202,7 +229,7 @@ class Ar4Parser():
         self.show_metadata(metadata)
         return {'metadata': metadata, 'prefix': prefix, 'records': records}
 
-    def show_datetime(self, title: str, unit_datetime: Unit_datetime) -> None:
+    def show_datetime(self, title: str, unit_datetime: UnitDatetime) -> None:
         print('{0}\t{3:02d}.{2:02d}.{1:d} {4:02d}:{5:02d}:{6:02d}'.format(
             title, *unit_datetime))
         return None
@@ -215,14 +242,14 @@ class Ar4Parser():
         return None
 
     def convert_unit_datetime_to_int(
-        self, unit_datetime: Unit_datetime
+        self, unit_datetime: UnitDatetime
     ) -> int:
         return (
             (unit_datetime[5]) +
             (unit_datetime[4] << 6) +
             (unit_datetime[3] << 12) +
-            ((unit_datetime[2]-1) << 17) + 
-            ((unit_datetime[1]-1) << 22) + 
+            ((unit_datetime[2]-1) << 17) +
+            ((unit_datetime[1]-1) << 22) +
             ((unit_datetime[0] - 2000) << 26)
         )
 
@@ -230,25 +257,25 @@ class Ar4Parser():
     def extract_time_period(
         self,
         records: List[bytes],
-        start_datetime: Unit_datetime,
-        end_datetime: Unit_datetime
+        start_datetime: UnitDatetime,
+        end_datetime: UnitDatetime
     ) -> List[bytes]:
         sdt, edt = None, None
         try:
             sdt = tuple(datetime(*start_datetime).timetuple())[:6]
         except ValueError as err:
             print(f'Wrong start timestamp: {err}.')
-        try: 
+        try:
             edt = tuple(datetime(*end_datetime).timetuple())[:6]
         except ValueError as err:
             print(f'Wrong end timestamp: {err}.')
         if not sdt or not edt:
             return []
-        start_ts = struct.pack('>I', 
-            self.convert_unit_datetime_to_int(sdt)
+        start_ts = struct.pack(
+            '>I', self.convert_unit_datetime_to_int(sdt)
         )
-        end_ts = struct.pack('>I', 
-            self.convert_unit_datetime_to_int(edt)
+        end_ts = struct.pack(
+            '>I', self.convert_unit_datetime_to_int(edt)
         )
 
         result = []
@@ -257,12 +284,13 @@ class Ar4Parser():
                 result.append(record)
         return result
 
-    def extract_one_date(self, records: List[bytes],
-        unit_datetime: Unit_datetime) -> List[bytes]:
+    def extract_one_date(
+        self, records: List[bytes], unit_datetime: UnitDatetime
+    ) -> List[bytes]:
         start_datetime = unit_datetime[:3] + (0, 0, 0)
         try:
             end_datetime = tuple((
-                    datetime(*start_datetime)+
+                    datetime(*start_datetime) +
                     timedelta(days=1)).timetuple())[:6]
         except ValueError as err:
             print(f'Wrong datetime: {err}')
@@ -296,8 +324,9 @@ class Ar4Parser():
     #! Если количество каналов 8, то ошибки и уставки помещаются в 1 байт. Не понятно, как будет выглядеть все это для другого количества каналов (4 и 16)
     # По идее, надо передавать в метод второй параметр frm = f'>{int((len(reading[9:]) - 1)/4)}fB' для чтения значений каналов, но в таком случае код
     # замедляется в полтора раза. lim2 - подозреваю, что возможно, есть значение второй уставки.
-    def decrypt_record(self, record: bytes) -> Dict[
-        int, Union[Unit_datetime, List[int], List[float], int]]:
+    def decrypt_record(
+        self, record: bytes
+    ) -> Dict[int, Union[UnitDatetime, List[int], List[float], int]]:
 
         _, length, int_dt, lim1, lim2, err = struct.unpack(
             '<2BI3B', record[:9])
@@ -317,7 +346,8 @@ class Ar4Parser():
             return []
         time_start = perf_counter()
         decrypted_records = [
-        self.decrypt_record(record) for record in records]
+            self.decrypt_record(record) for record in records
+        ]
         print('{} records decrypted in {:.2f} ms.'.format(
             len(decrypted_records),
             (perf_counter() - time_start)*1e3))
@@ -325,7 +355,8 @@ class Ar4Parser():
         result = sorted(decrypted_records, key=lambda d: d['datetime'])
         print('{} records sorted in {:.2f} ms.'.format(
             len(result),
-            (perf_counter() - time_start)*1e3))
+            (perf_counter() - time_start)*1e3)
+        )
         return result
 
     def convert_decrypted_record_to_str(self, record: dict, sep: str) -> str:
@@ -334,7 +365,8 @@ class Ar4Parser():
                 '{2:02d}.{1:02d}.{0:d}{6}{3:02d}:{4:02d}:{5:02d}'.format(
                 *record['datetime'], sep),
                 *['{:.6f}'.format(r).replace('.', ',') if r != None else
-                 'None' for r in record['readings']]
+                 'None' for r in record['readings']
+                ]
             ]
         )
 
@@ -353,7 +385,7 @@ class Ar4Parser():
 
     def create_filename(
         self, unit_number: int,
-        start_datetime: Unit_datetime, end_datetime: Unit_datetime,
+        start_datetime: UnitDatetime, end_datetime: UnitDatetime,
         frm=None, file_ext=None
     ) -> str:
 
@@ -378,7 +410,7 @@ class Ar4Parser():
         return None
 
     def extract_last_date_from_outside(
-        self, raw_data: dict, sep = None, write_to_file: bool = False
+        self, raw_data: dict, sep=None, write_to_file: bool = False
     ) -> List[dict]:
 
         file_sep = (sep or self.file_sep)
@@ -395,9 +427,9 @@ class Ar4Parser():
     def extract_time_period_from_outside(
         self,
         raw_data: dict,
-        start_datetime: Unit_datetime,
-        end_datetime: Unit_datetime,
-        sep = None,
+        start_datetime: UnitDatetime,
+        end_datetime: UnitDatetime,
+        sep=None,
         write_to_file: bool = False
     ):
 
@@ -407,7 +439,10 @@ class Ar4Parser():
         decrypted_records = self.decrypt_records(records)
         if write_to_file:
             self.export_decrypted_records_to_file(
-                decrypted_records, raw_data['metadata']['unit_number'], file_sep)
+                decrypted_records,
+                raw_data['metadata']['unit_number'],
+                file_sep
+            )
         return decrypted_records
 
     # def convert_int_to_unit_date(self, int_date: int) -> Tuple[int, int, int, int, int, int]:
