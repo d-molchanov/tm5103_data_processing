@@ -1,3 +1,6 @@
+"""Модуль, содержащий класс Ar4Parser, предназначенный для 
+   декодирования файлов формата .AR4 
+"""
 import os
 import struct
 import json
@@ -445,18 +448,7 @@ class Ar4Parser():
             )
         return decrypted_records
 
-    # def convert_int_to_unit_date(self, int_date: int) -> Tuple[int, int, int, int, int, int]:
-    #     mask = [0b11111, 0b1111, 0b11111]
-    #     shift = [0, 5, 9]
-    #     dt = [int_date>>s & m for s, m in zip(shift, mask)]
-    #     dt[-1] += 2000
-    #     dt[-2] += 1
-    #     dt[-3] += 1
-    #     return tuple(dt[::-1])
-
-
-if __name__ == '__main__':
-
+def test_module() -> None:
     filename = 'TM100514_B.AR4'
     write_to_file = True
     config = {
@@ -492,3 +484,17 @@ if __name__ == '__main__':
         raw_data, write_to_file=True)
 
     print(data_5 == data_6, len(data_5), len(data_6))
+
+    # def convert_int_to_unit_date(self, int_date: int) -> Tuple[int, int, int, int, int, int]:
+    #     mask = [0b11111, 0b1111, 0b11111]
+    #     shift = [0, 5, 9]
+    #     dt = [int_date>>s & m for s, m in zip(shift, mask)]
+    #     dt[-1] += 2000
+    #     dt[-2] += 1
+    #     dt[-3] += 1
+    #     return tuple(dt[::-1])
+
+
+if __name__ == '__main__':
+    test_module()
+    
