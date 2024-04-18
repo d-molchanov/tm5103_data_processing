@@ -83,7 +83,6 @@ class Ar4Parser():
             self.datetime_format = config['datetime_format']
         if 'file_ext' in config:
             self.file_ext = config['file_ext']
-        return None
 
     def read_in_chunks(self, filename: str, chunk_size: int) -> List[bytes]:
         """Метод для чтения бинарного файла по частям
@@ -96,8 +95,10 @@ class Ar4Parser():
                 while chunk:
                     result.append(chunk)
                     chunk = f.read(chunk_size)
-                print('Read <{}> in {:.2f} ms.'.format(
-                    filename, (perf_counter() - time_start)*1e3))
+                print(
+                    f'Read ``{filename}`` in',
+                    f'{(perf_counter() - time_start)*1e3:.2f} ms.'
+                )
         except IOError as err:
             print(f'Error with <{filename}>:\n{err}.')
         return result
@@ -130,7 +131,6 @@ class Ar4Parser():
         i = 0
         while i < len(binary_data):
             if binary_data[i] != empty_byte[0]:
-            # if binary_data[i] != 255:
                 msg_length = binary_data[i+1]
                 result.append(binary_data[i:i+msg_length])
                 i += msg_length
@@ -190,6 +190,9 @@ class Ar4Parser():
         self,
         header: bytes
     ) -> Dict[str, Union[int, UnitDatetime]]:
+        """Метод для извлечения серийного номера прибора и
+           даты создания архива
+        """
         timestamp, unit_number = struct.unpack('<2I', header[22:30])
         creation_datetime = self.get_unit_datetime(timestamp)
 
@@ -199,11 +202,16 @@ class Ar4Parser():
 
     def find_min_and_max_datetimes(
         self, binary_data: List[bytes]
-    ) -> Dict[str, Tuple[int, int, int, int, int, int]]:
+    ) -> Dict[str, UnitDatetime]:
+        """Метод для поиска наименьшей и наибольшей даты в архиве
+        """
         max_datetime = b'\x00\x00\x00\x01'
         min_datetime = b'\xff\xff\xff\xff'
         for chunk in binary_data:
             timestamp = chunk[2:6][::-1]
+            # Такой код замедляет выполнение программы на ~20%
+            # min_datetime = min(timestamp, min_datetime)
+            # max_datetime = max(timestamp, max_datetime)
             if timestamp > max_datetime:
                 max_datetime = timestamp
             if timestamp < min_datetime:
@@ -220,6 +228,8 @@ class Ar4Parser():
         chunk_size: Optional[int] = None,
         empty_byte: Optional[bytes] = None
     ) -> Union[Dict[str, List[bytes]], Dict[str, int]]:
+        """Метод для извлечения информации из архива
+        """
         _empty_byte = (empty_byte or self.empty_byte)
         _chunk_size = (chunk_size or self.chunk_size)
         binary_data = self.read_binary_file(
@@ -233,20 +243,25 @@ class Ar4Parser():
         return {'metadata': metadata, 'prefix': prefix, 'records': records}
 
     def show_datetime(self, title: str, unit_datetime: UnitDatetime) -> None:
+        """Метод для вывода в консоль даты и времени
+        """
         print('{0}\t{3:02d}.{2:02d}.{1:d} {4:02d}:{5:02d}:{6:02d}'.format(
             title, *unit_datetime))
-        return None
 
     def show_metadata(self, metadata):
+        """Метод для вывода в консоль метаданных архива
+        """
         print(f"\nUnit number: {metadata['unit_number']}\n")
         self.show_datetime('Creation datetime:', metadata['creation_datetime'])
         self.show_datetime('Minimum datetime: ', metadata['min_datetime'])
         self.show_datetime('Maximum datetime: ', metadata['max_datetime'])
-        return None
 
     def convert_unit_datetime_to_int(
         self, unit_datetime: UnitDatetime
     ) -> int:
+        """Метод для преобразования времени и даты из формата
+           <unit_datetime> в целое число
+        """
         return (
             (unit_datetime[5]) +
             (unit_datetime[4] << 6) +
@@ -263,6 +278,8 @@ class Ar4Parser():
         start_datetime: UnitDatetime,
         end_datetime: UnitDatetime
     ) -> List[bytes]:
+        """Метод для извлечения из архива заданного временного интервала
+        """
         sdt, edt = None, None
         try:
             sdt = tuple(datetime(*start_datetime).timetuple())[:6]
@@ -290,6 +307,9 @@ class Ar4Parser():
     def extract_one_date(
         self, records: List[bytes], unit_datetime: UnitDatetime
     ) -> List[bytes]:
+        """Метод для извлечения из архива записей, соответствующих
+           заданной дате.
+        """
         start_datetime = unit_datetime[:3] + (0, 0, 0)
         try:
             end_datetime = tuple((
@@ -303,13 +323,21 @@ class Ar4Parser():
             records, start_datetime, end_datetime)
 
     def extract_last_date(self, raw_data: dict) -> List[bytes]:
+        """Метод для извлечния из архива записей, соответсвующих
+           последней дате.
+        """
         return self.extract_one_date(
             raw_data['records'], raw_data['metadata']['max_datetime'])
 
     def get_int_date(self, binary_data: bytes) -> int:
+        """Метод для получения целого представления даты-времени
+           из строки байтов.
+        """
         return (struct.unpack('<H', binary_data)[0] >> 1)
 
     def split_records_by_dates(self, records: List[bytes]) -> Dict[str, list]:
+        """Метод для разбиения извлеченных записей по отдельным датам.
+        """
         if not records:
             return {}
         result = {}
@@ -322,15 +350,21 @@ class Ar4Parser():
         return result
 
     def get_bits_LE(self, i: int, bits_amount: int) -> List[int]:
+        """Метод для получения битов числа в обратном порядке.
+        """
         return [i >> j & 1 for j in range(bits_amount)]
 
-    #! Если количество каналов 8, то ошибки и уставки помещаются в 1 байт. Не понятно, как будет выглядеть все это для другого количества каналов (4 и 16)
-    # По идее, надо передавать в метод второй параметр frm = f'>{int((len(reading[9:]) - 1)/4)}fB' для чтения значений каналов, но в таком случае код
-    # замедляется в полтора раза. lim2 - подозреваю, что возможно, есть значение второй уставки.
+    #! Если количество каналов 8, то ошибки и уставки помещаются в 1 байт.
+    # Не понятно, как будет выглядеть все это для другого количества
+    # каналов (4 и 16). По идее, надо передавать в метод второй параметр
+    # frm = f'>{int((len(reading[9:]) - 1)/4)}fB' для чтения значений каналов,
+    # но в таком случае код замедляется в полтора раза.
+    # lim2 - подозреваю, что возможно, есть значение второй уставки.
     def decrypt_record(
         self, record: bytes
     ) -> Dict[int, Union[UnitDatetime, List[int], List[float], int]]:
-
+        """Метод для декодирования записи.
+        """
         _, length, int_dt, lim1, lim2, err = struct.unpack(
             '<2BI3B', record[:9])
         dt = self.get_unit_datetime(int_dt)
@@ -345,29 +379,33 @@ class Ar4Parser():
             'errors': err, 'limits': lim1, 'cs': cs}
 
     def decrypt_records(self, records: List[bytes]) -> List[dict]:
+        """Метод для декодирования записей."""
         if not records:
             return []
         time_start = perf_counter()
         decrypted_records = [
             self.decrypt_record(record) for record in records
         ]
-        print('{} records decrypted in {:.2f} ms.'.format(
-            len(decrypted_records),
-            (perf_counter() - time_start)*1e3))
+        print(
+            f'{len(decrypted_records)} records were decrypted in',
+            f'{(perf_counter() - time_start)*1e3:.2f} ms.'
+        )
         time_start = perf_counter()
         result = sorted(decrypted_records, key=lambda d: d['datetime'])
-        print('{} records sorted in {:.2f} ms.'.format(
-            len(result),
-            (perf_counter() - time_start)*1e3)
+        print(
+            f'{len(result)} records were sorted in',
+            f'{(perf_counter() - time_start)*1e3:.2f} ms.'
         )
         return result
 
     def convert_decrypted_record_to_str(self, record: dict, sep: str) -> str:
+        """Метод для строкового представления записи из архива."""
         return sep.join(
             [
                 '{2:02d}.{1:02d}.{0:d}{6}{3:02d}:{4:02d}:{5:02d}'.format(
-                *record['datetime'], sep),
-                *['{:.6f}'.format(r).replace('.', ',') if r != None else
+                    *record['datetime'], sep
+                ),
+                *['{:.6f}'.format(r).replace('.', ',') if r is not None else
                  'None' for r in record['readings']
                 ]
             ]
@@ -378,19 +416,23 @@ class Ar4Parser():
         decrypted_records: List[dict],
         filename: str, sep: str
     ) -> None:
+        """Метод для записи записей в текстовый файл."""
         try:
             with open(filename, 'w') as f:
                 for decrypted_record in decrypted_records:
-                    f.write(f'{self.convert_decrypted_record_to_str(decrypted_record, sep)}\n')
+                    str_record = self.convert_decrypted_record_to_str(
+                        decrypted_record, sep
+                    )
+                    f.write(f'{str_record}\n')
         except IOError:
             print(f'Error with <{filename}>.')
-        return None
 
     def create_filename(
         self, unit_number: int,
         start_datetime: UnitDatetime, end_datetime: UnitDatetime,
         frm=None, file_ext=None
     ) -> str:
+        """Метод для создания имени файла."""
 
         dt_format = (frm or self.datetime_format)
         _file_ext = (file_ext or self.file_ext)
@@ -404,18 +446,21 @@ class Ar4Parser():
         records: List[dict],
         unit_number: int, sep: str
     ) -> None:
+        """Метод для экспорта декодированных записей в текстовый файл.
+        """
         filename = self.create_filename(
             unit_number,
             records[0]['datetime'],
             records[-1]['datetime']
         )
         self.write_decrypted_records_to_file(records, filename, sep)
-        return None
 
     def extract_last_date_from_outside(
         self, raw_data: dict, sep=None, write_to_file: bool = False
     ) -> List[dict]:
-
+        """Метод для извлечения записей, соответствующих
+           последней дате в архиве.
+        """
         file_sep = (sep or self.file_sep)
         records = self.extract_last_date(raw_data)
         decrypted_records = self.decrypt_records(records)
@@ -435,7 +480,9 @@ class Ar4Parser():
         sep=None,
         write_to_file: bool = False
     ):
-
+        """Метод для извлечения заданного временного периода
+           из архива.
+        """
         file_sep = (sep or self.file_sep)
         records = self.extract_time_period(
             raw_data['records'], start_datetime, end_datetime)
@@ -448,7 +495,10 @@ class Ar4Parser():
             )
         return decrypted_records
 
+
 def test_module() -> None:
+    """Метод для тестирования модуля ``ar4_parser.py``.
+    """
     filename = 'TM100514_B.AR4'
     write_to_file = True
     config = {
@@ -475,7 +525,12 @@ def test_module() -> None:
     d_4 = ar4_parser.split_records_by_dates(raw_data['records'])
     k = max(list(d_4.keys()))
     data_4 = d_4[k]
-    print(data_1 == data_2, data_2 == data_3, data_3 == data_4, data_4 == data_1)
+    print(
+        data_1 == data_2,
+        data_2 == data_3,
+        data_3 == data_4,
+        data_4 == data_1
+    )
     print(len(data_1), len(data_2), len(data_3), len(data_4))
 
     data_5 = ar4_parser.extract_time_period_from_outside(
@@ -485,7 +540,9 @@ def test_module() -> None:
 
     print(data_5 == data_6, len(data_5), len(data_6))
 
-    # def convert_int_to_unit_date(self, int_date: int) -> Tuple[int, int, int, int, int, int]:
+    # def convert_int_to_unit_date(
+    #     self, int_date: int
+    # ) -> UnitDatetime:
     #     mask = [0b11111, 0b1111, 0b11111]
     #     shift = [0, 5, 9]
     #     dt = [int_date>>s & m for s, m in zip(shift, mask)]
@@ -497,4 +554,3 @@ def test_module() -> None:
 
 if __name__ == '__main__':
     test_module()
-    
