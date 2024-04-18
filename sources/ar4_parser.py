@@ -495,6 +495,15 @@ class Ar4Parser():
             )
         return decrypted_records
 
+def test_module_2() -> None:
+    """Метод для тестирования модуля ``ar4_parser.py``.
+    """
+    filename = 'TM100514_B.AR4'
+    ar4_parser = Ar4Parser()
+    raw_data = ar4_parser.parse_ar4_file(filename)
+    data = ar4_parser.extract_last_date(raw_data)
+
+
 
 def test_module() -> None:
     """Метод для тестирования модуля ``ar4_parser.py``.
@@ -553,4 +562,4 @@ def test_module() -> None:
 
 
 if __name__ == '__main__':
-    test_module()
+    test_module_2()
