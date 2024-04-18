@@ -495,14 +495,27 @@ class Ar4Parser():
             )
         return decrypted_records
 
+    def write_csv(self, filename: str, data: List[dict]) -> None:
+        """Метод для записи csv-файла
+        """
+        with open(filename, 'w') as f:
+            writer = csv.writer(f, delimiter=';')
+            writer.writerows(data)
+
 def test_module_2() -> None:
     """Метод для тестирования модуля ``ar4_parser.py``.
     """
     filename = 'TM100514_B.AR4'
     ar4_parser = Ar4Parser()
     raw_data = ar4_parser.parse_ar4_file(filename)
-    data = ar4_parser.extract_last_date(raw_data)
-
+    data = ar4_parser.extract_last_date_from_outside(raw_data)
+    d = []
+    for line in data:
+        temp_list = [datetime(*line['datetime'])]
+        temp_list += line['readings']
+        d.append(temp_list)
+    print(data[-1:])
+    ar4_parser.write_csv('test.csv', d[-1:])
 
 
 def test_module() -> None:
