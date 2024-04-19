@@ -1,5 +1,5 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
+"""Модуль, содержащий класс GraphMaker, предназначенный для
+   построения графиков."""
 
 import os
 import time
@@ -10,14 +10,16 @@ import copy
 
 from collections import abc
 import json
-import bisect
-import argparse
+# import bisect
+# import argparse
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-class GraphMaker:
 
+class GraphMaker:
+    """Класс, предназначенный для построения графиков
+    """
     def __init__(self):
         self.settings = {
             'title': '',
@@ -44,7 +46,7 @@ class GraphMaker:
             'x label settings': {'fontsize': 14},
             'y label': 'T, \u2103',
             'y label settings': {
-                'fontsize': 14, 
+                'fontsize': 14,
                 'rotation': 0
             },
             'y major locator': 100,
@@ -68,7 +70,7 @@ class GraphMaker:
             'labels': [None, None, None, None, None, None, None, None],
             'plot': {'linewidth': 1},
             'legend': {
-                'bbox_to_anchor': [0, 1, 1, 0], 
+                'bbox_to_anchor': [0, 1, 1, 0],
                 'loc': 'lower left',
                 'mode': 'expand',
                 'ncol': 8,
@@ -85,7 +87,10 @@ class GraphMaker:
         }
 
     def update_dict(self, old_dict: dict, new_dict: dict) -> None:
-        if not isinstance(old_dict, abc.Mapping) or not isinstance(new_dict, abc.Mapping):
+        if (
+            not isinstance(old_dict, abc.Mapping) or
+            not isinstance(new_dict, abc.Mapping)
+        ):
             return None
         for key, value in new_dict.items():
             if key in old_dict:
@@ -114,16 +119,15 @@ class GraphMaker:
         if output_file == 'output.png':
             filename = 'graph_settings.json'
         else:
-            filename =  f'{os.path.splitext(output_file)[0]}_graph_settings.json'
+            path_ = os.path.splitext(output_file)[0]
+            filename = f'{path_}_graph_settings.json'
         try:
             with open(filename, 'w') as f:
                 json.dump(self.settings, f, indent=4)
         except IOError as err:
             print(err)
         return None
-    #! TODO: read extention for picture from config file
-
-
+    # ! TODO: read extention for picture from config file
 
     def parse_float(self, str_value):
         try:
@@ -143,15 +147,27 @@ class GraphMaker:
         with open(filename, 'r') as f:
             first_line = f.readline().split(';')
             time_list.append(self.parse_time(first_line[1]))
-            value_matrix = [[self.parse_float(el.replace(',', '.'))] for el in first_line[2:]]
+            value_matrix = [
+                [self.parse_float(el.replace(',', '.'))] for
+                el in first_line[2:]
+            ]
             for line in f:
                 split_line = line.split(';')
                 time_list.append(self.parse_time(split_line[1]))
                 for v, el in zip(value_matrix, split_line[2:]):
                     v.append(self.parse_float(el.replace(',', '.')))
+        print(
+            f'{filename} was parsed in',
+            f'{(time.perf_counter() - time_start)*1e3:.2f} ms.'
+        )
         return {'time': time_list, 'values': value_matrix}
 
-    def create_graph_new(self, datetimes: List[datetime], values: List[List[Union[float, None]]], settings: Union[dict, None]=None) -> None:
+    def create_graph_new(
+        self,
+        datetimes: List[datetime],
+        values: List[List[Union[float, None]]],
+        settings: Union[dict, None] = None
+    ) -> None:
         if not settings:
             _settings = self.settings
         else:
@@ -163,7 +179,6 @@ class GraphMaker:
         ax.grid(**_settings['minor grid'])
         ax.set_xlabel(_settings['x label'], **_settings['x label settings'])
         ax.set_ylabel(_settings['y label'], **_settings['y label settings'])
-
 
         ax.xaxis.set_major_formatter(
             mpl.dates.DateFormatter(_settings['x major formatter']))
@@ -183,7 +198,9 @@ class GraphMaker:
         for label in (ax.get_xticklabels() + ax.get_yticklabels()):
             label.set_fontsize(_settings['labels fontsize'])
 
-        fig.set_size_inches(*_settings['fig size'], **_settings['fig size settings'])
+        fig.set_size_inches(
+            *_settings['fig size'], **_settings['fig size settings']
+        )
         if _settings['tight layout']:
             fig.tight_layout()
 
@@ -197,8 +214,6 @@ class GraphMaker:
             plt.savefig(_settings['output file'], **_settings['savefig'])
         else:
             plt.show()
-
-
 
     # def create_graph(self, header, time_list, value_matrix, graph_title, annotation, output_file):
     #     print('Start creating diagram')
@@ -330,7 +345,7 @@ class GraphMaker:
 def main():
     filename = '2023_10_05.csv'
     bname, ext = os.path.splitext(filename)
-    #! TODO: read extention for picture from config file
+    # ! TODO: read extention for picture from config file
     output_filename = f'{bname}.png'
 
     graph_maker = GraphMaker()
@@ -341,33 +356,39 @@ def main():
         'labels': [f'ТП{i}' for i in range(1, 9)],
         'save to file': False,
         # 'save to file': True,
-        'x lim': [data['time'][0] - timedelta(minutes=10), data['time'][-1] + timedelta(minutes=10)],
+        'x lim': [
+            data['time'][0] - timedelta(minutes=10),
+            data['time'][-1] + timedelta(minutes=10)
+        ],
         'output file': output_filename,
-        'title': 'Hello!', 
+        'title': 'Hello!',
         'title settings': {'fontsize': 72}
     }
     # graph_maker.config('graph_settings.json')
     # graph_maker.config(sttngs)
-    graph_maker.create_graph_new(data['time'], data['values'], settings=sttngs) 
+    graph_maker.create_graph_new(data['time'], data['values'], settings=sttngs)
     # graph_maker.config({'x lim': [None, None]})
     # graph_maker.export_config()
-    # graph_maker.create_graph_old(data['time'], data['values'], settings) 
-    # graph_maker.create_graph_new(data['time'], data['values'], settings=settings) 
+    # graph_maker.create_graph_old(data['time'], data['values'], settings)
+    # graph_maker.create_graph_new(data['time'], data['values'], settings=settings)
 
 
 if __name__ == '__main__':
 
     main()
-
-
-    # # 2024_04_13 =============================================================
-    # # target_dir = os.path.abspath('D:/JIHT/!2024/!Ларина/!Processed_ED/(2024_03_13)')
+    # # 2024_04_13 ===========================================================
+    # # target_dir = os.path.abspath(
+    #     'D:/JIHT/!2024/!Ларина/!Processed_ED/(2024_03_13)'
+    # )
     # target_dir = os.path.abspath('.')
     # prefix = os.path.split(target_dir)[1][1:-1]
     # suffixes = ['A', 'A_partial', 'B', 'B_partial']
-    
+    #
     # ext = '.csv'
-    # # filenames = [os.path.join(target_dir, f"{'_'.join([prefix, s])}{ext}") for s in suffixes]
+    # # filenames = [
+    #     os.path.join(target_dir, f"{'_'.join([prefix, s])}{ext}") for
+    #     s in suffixes
+    # ]
     # filenames = ['2023_10_05.csv']
     # file_index = 0
     # print(*filenames, sep='\n')
@@ -385,9 +406,10 @@ if __name__ == '__main__':
     # ann_filename = os.path.join(path, f'{bname}_annotation{ext}')
     # # output_file = os.path.join(path, f'{bname}.svg')
     # output_file = os.path.join(path, f'{bname}.png')
-    
+    #
     # annotation = gp.read_annotation(ann_filename)
     # data = gp.parse_file(filename)
-    # gp.create_graph(header, data['time'], data['values'], graph_title, annotation, output_file)
-
-
+    # gp.create_graph(
+    #     header, data['time'], data['values'],
+    #     graph_title, annotation, output_file
+    # )
